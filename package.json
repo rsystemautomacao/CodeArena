@@ -1,0 +1,44 @@
+{
+  "name": "codearena",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "init-superadmin": "node scripts/init-superadmin.js",
+    "admin": "node admin.js",
+    "test": "echo \"No tests specified\" && exit 0",
+    "setup:dev": "node scripts/setup-env.js development",
+    "setup:prod": "node scripts/setup-env.js production"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "autoprefixer": "^10.4.16",
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^2.30.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.294.0",
+    "mongodb": "^6.3.0",
+    "mongoose": "^8.0.3",
+    "next": "^14.2.32",
+    "next-auth": "^4.24.5",
+    "postcss": "^8.4.32",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-hot-toast": "^2.4.1",
+    "tailwindcss": "^3.3.6"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4",
+    "typescript": "^5"
+  }
+}

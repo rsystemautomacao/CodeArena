@@ -1,0 +1,178 @@
+import { NextAuthOptions } from 'next-auth';
+import GoogleProvider from 'next-auth/providers/google';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import bcrypt from 'bcryptjs';
+import connectDB from './mongodb';
+import User from '@/models/User';
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    // Google Provider - só funciona se as credenciais estiverem configuradas
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && 
+        process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here' ? 
+        [GoogleProvider({
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        })] : []),
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Senha', type: 'password' }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        // Verificar se é o superadmin
+        if (credentials.email === process.env.SUPERADMIN_EMAIL) {
+          if (credentials.password === process.env.SUPERADMIN_PASSWORD) {
+            return {
+              id: 'superadmin-dev',
+              name: 'Super Admin',
+              email: credentials.email,
+              role: 'superadmin',
+            };
+          }
+          return null;
+        }
+
+        // Em modo de desenvolvimento, permitir login com qualquer email/senha
+        if (process.env.NODE_ENV === 'development') {
+          // Simular diferentes tipos de usuário baseado no email
+          if (credentials.email.includes('professor') || credentials.email.includes('teacher')) {
+            return {
+              id: 'professor-dev',
+              name: 'Professor de Desenvolvimento',
+              email: credentials.email,
+              role: 'professor',
+            };
+          }
+          
+          return {
+            id: 'aluno-dev',
+            name: 'Aluno de Desenvolvimento',
+            email: credentials.email,
+            role: 'aluno',
+          };
+        }
+
+        // Em produção, conectar ao banco de dados
+        try {
+          await connectDB();
+          const user = await User.findOne({ 
+            email: credentials.email,
+            isActive: true 
+          });
+
+          if (!user) {
+            return null;
+          }
+
+          return {
+            id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            image: user.image,
+          };
+        } catch (error) {
+          console.error('Erro de conexão com banco:', error);
+          return null;
+        }
+      }
+    })
+  ],
+  callbacks: {
+    async signIn({ user, account, profile }) {
+      // Em desenvolvimento, permitir qualquer login
+      if (process.env.NODE_ENV === 'development') {
+        return true;
+      }
+
+      // Em produção, processar Google OAuth
+      if (account?.provider === 'google') {
+        try {
+          await connectDB();
+          
+          // Verificar se o usuário já existe
+          const existingUser = await User.findOne({ email: user.email });
+          
+          if (existingUser) {
+            // Atualizar dados do Google
+            await User.findByIdAndUpdate(existingUser._id, {
+              name: user.name,
+              image: user.image,
+            });
+            return true;
+          }
+
+          // Verificar se há um convite pendente para professores
+          const Invite = (await import('@/models/Invite')).default;
+          const invite = await Invite.findOne({ 
+            email: user.email,
+            isUsed: false,
+            expiresAt: { $gt: new Date() }
+          });
+
+          if (invite) {
+            // Criar usuário como professor
+            await User.create({
+              name: user.name!,
+              email: user.email!,
+              image: user.image,
+              role: 'professor',
+              isActive: true,
+            });
+
+            // Marcar convite como usado
+            await Invite.findByIdAndUpdate(invite._id, {
+              isUsed: true,
+              usedAt: new Date(),
+            });
+
+            return true;
+          }
+
+          // Para alunos, permitir criação automática
+          await User.create({
+            name: user.name!,
+            email: user.email!,
+            image: user.image,
+            role: 'aluno',
+            isActive: true,
+          });
+
+          return true;
+        } catch (error) {
+          console.error('Erro no Google OAuth:', error);
+          return false;
+        }
+      }
+
+      return true;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.sub!;
+        session.user.role = token.role as string;
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
+  session: {
+    strategy: 'jwt',
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+};
