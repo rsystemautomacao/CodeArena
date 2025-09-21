@@ -49,32 +49,50 @@ export default function SuperAdminDashboard() {
     onConfirm: () => {}
   });
 
-  // Carregar convites existentes (simulado para desenvolvimento)
+  // Carregar convites existentes
   useEffect(() => {
-    // Em desenvolvimento, simular alguns convites
-    if (process.env.NODE_ENV === 'development') {
-      setInvites([
-        {
-          id: '1',
-          email: 'professor1@exemplo.com',
-          token: 'token1',
-          inviteUrl: 'http://localhost:3000/auth/invite/token1',
-          createdAt: new Date().toISOString(),
-          isUsed: false,
-          isActive: true
-        },
-        {
-          id: '2',
-          email: 'professor2@exemplo.com',
-          token: 'token2',
-          inviteUrl: 'http://localhost:3000/auth/invite/token2',
-          createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 dia atrás
-          isUsed: true,
-          isActive: true
+    const loadInvites = async () => {
+      try {
+        // Tentar carregar da API primeiro
+        const response = await fetch('/api/invites');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.invites) {
+            setInvites(data.invites);
+            return;
+          }
         }
-      ]);
-    }
+      } catch (error) {
+        console.log('🎯 [DEV] API não disponível, carregando do localStorage');
+      }
+
+      // Fallback: carregar do localStorage em desenvolvimento
+      if (process.env.NODE_ENV === 'development') {
+        const savedInvites = localStorage.getItem('codearena-invites');
+        if (savedInvites) {
+          try {
+            const parsedInvites = JSON.parse(savedInvites);
+            setInvites(parsedInvites);
+            console.log('🎯 [DEV] Convites carregados do localStorage:', parsedInvites.length);
+          } catch (error) {
+            console.error('Erro ao carregar convites do localStorage:', error);
+          }
+        } else {
+          console.log('🎯 [DEV] Nenhum convite salvo encontrado');
+        }
+      }
+    };
+
+    loadInvites();
   }, []);
+
+  // Função para salvar convites no localStorage
+  const saveInvitesToStorage = (invitesList: Invite[]) => {
+    if (process.env.NODE_ENV === 'development') {
+      localStorage.setItem('codearena-invites', JSON.stringify(invitesList));
+      console.log('🎯 [DEV] Convites salvos no localStorage:', invitesList.length);
+    }
+  };
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -137,7 +155,9 @@ export default function SuperAdminDashboard() {
           isActive: true
         };
         
-        setInvites(prev => [newInvite, ...prev]);
+        const updatedInvites = [newInvite, ...invites];
+        setInvites(updatedInvites);
+        saveInvitesToStorage(updatedInvites);
         setShowInviteUrl(data.inviteUrl);
         setEmail('');
       } else {
@@ -167,11 +187,13 @@ export default function SuperAdminDashboard() {
 
       if (data.success) {
         // Atualizar o convite na lista
-        setInvites(prev => prev.map(inv => 
+        const updatedInvites = invites.map(inv => 
           inv.id === inviteId 
             ? { ...inv, token: data.inviteUrl.split('/').pop() || '', inviteUrl: data.inviteUrl, isUsed: false }
             : inv
-        ));
+        );
+        setInvites(updatedInvites);
+        saveInvitesToStorage(updatedInvites);
         setShowInviteUrl(data.inviteUrl);
         toast.success('Novo link de convite gerado!');
       } else {
@@ -194,11 +216,13 @@ export default function SuperAdminDashboard() {
       `Tem certeza que deseja ${action} o acesso do convite para ${invite.email}?`,
       'warning',
       () => {
-        setInvites(prev => prev.map(inv => 
+        const updatedInvites = invites.map(inv => 
           inv.id === inviteId 
             ? { ...inv, isActive: !inv.isActive }
             : inv
-        ));
+        );
+        setInvites(updatedInvites);
+        saveInvitesToStorage(updatedInvites);
         toast.success(`Acesso ${actionPast} com sucesso!`);
       }
     );
@@ -213,7 +237,9 @@ export default function SuperAdminDashboard() {
       `Tem certeza que deseja excluir permanentemente o convite para ${invite.email}? Esta ação não pode ser desfeita.`,
       'danger',
       () => {
-        setInvites(prev => prev.filter(inv => inv.id !== inviteId));
+        const updatedInvites = invites.filter(inv => inv.id !== inviteId);
+        setInvites(updatedInvites);
+        saveInvitesToStorage(updatedInvites);
         toast.success('Convite excluído com sucesso!');
       }
     );

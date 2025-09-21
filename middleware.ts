@@ -14,8 +14,18 @@ export default withAuth(
         
         // Proteger rotas de API que precisam de autenticação
         if (req.nextUrl.pathname.startsWith('/api/submissions') ||
-            req.nextUrl.pathname.startsWith('/api/test-code') ||
-            req.nextUrl.pathname.startsWith('/api/invites')) {
+            req.nextUrl.pathname.startsWith('/api/test-code')) {
+          return !!token;
+        }
+        
+        // Permitir acesso à validação de convites sem autenticação
+        if (req.nextUrl.pathname.startsWith('/api/invites/validate/')) {
+          return true;
+        }
+        
+        // Proteger criação de convites (apenas superadmin)
+        if (req.nextUrl.pathname.startsWith('/api/invites') && 
+            !req.nextUrl.pathname.startsWith('/api/invites/validate/')) {
           return !!token;
         }
         
