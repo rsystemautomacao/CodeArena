@@ -231,8 +231,26 @@ export default function SuperAdminDashboard() {
     );
   };
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/' });
+  const handleSignOut = async () => {
+    try {
+      // Limpar cache local
+      if (typeof window !== 'undefined') {
+        // Limpar localStorage se houver dados
+        localStorage.clear();
+        // Limpar sessionStorage
+        sessionStorage.clear();
+      }
+      
+      // Fazer logout
+      await signOut({ 
+        callbackUrl: '/',
+        redirect: true 
+      });
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      // Forçar redirecionamento em caso de erro
+      window.location.href = '/';
+    }
   };
 
   return (

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         email: invite.email,
         token: invite.token,
         inviteUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/invite/${invite.token}`,
-        createdAt: invite.createdAt.toISOString(),
+        createdAt: invite.createdAt, // Já é string ISO
         isUsed: invite.isUsed,
         isActive: !invite.isUsed && invite.expiresAt > new Date()
       }));
