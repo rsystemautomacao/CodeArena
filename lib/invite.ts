@@ -1,19 +1,47 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import connectDB from './mongodb';
 import Invite from '@/models/Invite';
 
-// Map para armazenar tokens em desenvolvimento (em memória)
-const devInviteTokens = new Map<string, {
+// Arquivo para persistir convites em desenvolvimento
+const DEV_INVITES_FILE = path.join(process.cwd(), 'dev-invites.json');
+
+// Interface para o convite
+interface DevInvite {
   email: string;
-  createdAt: Date;
-  expiresAt: Date;
+  createdAt: string;
+  expiresAt: string;
   isUsed: boolean;
   token: string;
-}>();
+}
 
-// Função para exportar os convites do Map (para a API)
-export function getDevInviteTokens() {
-  return Array.from(devInviteTokens.values());
+// Função para carregar convites do arquivo
+function loadDevInvites(): DevInvite[] {
+  try {
+    if (fs.existsSync(DEV_INVITES_FILE)) {
+      const data = fs.readFileSync(DEV_INVITES_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Erro ao carregar convites do arquivo:', error);
+  }
+  return [];
+}
+
+// Função para salvar convites no arquivo
+function saveDevInvites(invites: DevInvite[]) {
+  try {
+    fs.writeFileSync(DEV_INVITES_FILE, JSON.stringify(invites, null, 2));
+    console.log(`🎯 [DEV] Convites salvos no arquivo: ${invites.length}`);
+  } catch (error) {
+    console.error('Erro ao salvar convites no arquivo:', error);
+  }
+}
+
+// Função para exportar os convites (para a API)
+export function getDevInviteTokens(): DevInvite[] {
+  return loadDevInvites();
 }
 
 export async function generateInviteToken(): Promise<string> {
@@ -27,16 +55,23 @@ export async function createInvite(email: string): Promise<string> {
     const token = await generateInviteToken();
     console.log(`🎯 [DEV] Token gerado: ${token}`);
     
-    // Salvar no Map em memória
-    devInviteTokens.set(token, {
+    // Carregar convites existentes
+    const existingInvites = loadDevInvites();
+    
+    // Criar novo convite
+    const newInvite: DevInvite = {
       email: email.toLowerCase(),
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 horas
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 horas
       isUsed: false,
       token: token
-    });
+    };
     
-    console.log(`🎯 [DEV] Token-email salvo em memória: ${token} -> ${email}`);
+    // Adicionar à lista e salvar
+    existingInvites.push(newInvite);
+    saveDevInvites(existingInvites);
+    
+    console.log(`🎯 [DEV] Token-email salvo no arquivo: ${token} -> ${email}`);
     return token;
   }
 
@@ -71,12 +106,14 @@ export async function validateInvite(token: string): Promise<{ valid: boolean; e
   if (process.env.NODE_ENV === 'development') {
     console.log(`🎯 [DEV] Validando token: ${token}`);
     
-    // Buscar no Map em memória
-    const inviteData = devInviteTokens.get(token);
+    // Carregar convites do arquivo
+    const invites = loadDevInvites();
+    const inviteData = invites.find(invite => invite.token === token);
     
     if (inviteData) {
       // Verificar se não expirou
-      if (inviteData.expiresAt < new Date()) {
+      const expiresAt = new Date(inviteData.expiresAt);
+      if (expiresAt < new Date()) {
         return { valid: false, error: 'Este convite expirou' };
       }
       
@@ -121,12 +158,15 @@ export async function markInviteAsUsed(token: string): Promise<void> {
   if (process.env.NODE_ENV === 'development') {
     console.log(`🎯 [DEV] Marcando convite como usado: ${token}`);
     
-    // Marcar como usado no Map em memória
-    const inviteData = devInviteTokens.get(token);
-    if (inviteData) {
-      inviteData.isUsed = true;
-      devInviteTokens.set(token, inviteData);
-      console.log(`🎯 [DEV] Convite marcado como usado em memória: ${token}`);
+    // Carregar convites do arquivo
+    const invites = loadDevInvites();
+    const inviteIndex = invites.findIndex(invite => invite.token === token);
+    
+    if (inviteIndex !== -1) {
+      // Marcar como usado e salvar
+      invites[inviteIndex].isUsed = true;
+      saveDevInvites(invites);
+      console.log(`🎯 [DEV] Convite marcado como usado no arquivo: ${token}`);
     }
     
     return;
