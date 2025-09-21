@@ -40,6 +40,22 @@ export const authOptions: NextAuthOptions = {
 
         // Em modo de desenvolvimento, permitir login com qualquer email/senha
         if (process.env.NODE_ENV === 'development') {
+          // Verificar se é um email de professor (criado via convite)
+          const { getDevInviteTokens } = await import('@/lib/invite');
+          const devInvites = getDevInviteTokens();
+          const isProfessorEmail = devInvites.some(invite => 
+            invite.email === credentials.email.toLowerCase() && invite.isUsed
+          );
+          
+          if (isProfessorEmail) {
+            return {
+              id: `professor-${credentials.email}`,
+              name: `Professor ${credentials.email.split('@')[0]}`,
+              email: credentials.email,
+              role: 'professor',
+            };
+          }
+          
           // Simular diferentes tipos de usuário baseado no email
           if (credentials.email.includes('professor') || credentials.email.includes('teacher')) {
             return {
