@@ -53,44 +53,41 @@ export default function SuperAdminDashboard() {
   useEffect(() => {
     const loadInvites = async () => {
       try {
-        // Tentar carregar da API primeiro
+        // Carregar da API
         const response = await fetch('/api/invites');
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.invites) {
             setInvites(data.invites);
+            console.log('🎯 [DEV] Convites carregados do servidor:', data.invites.length);
             return;
           }
         }
       } catch (error) {
-        console.log('🎯 [DEV] API não disponível, carregando do localStorage');
+        console.error('🎯 [DEV] Erro ao carregar convites da API:', error);
       }
 
-      // Fallback: carregar do localStorage em desenvolvimento
-      if (process.env.NODE_ENV === 'development') {
-        const savedInvites = localStorage.getItem('codearena-invites');
-        if (savedInvites) {
-          try {
-            const parsedInvites = JSON.parse(savedInvites);
-            setInvites(parsedInvites);
-            console.log('🎯 [DEV] Convites carregados do localStorage:', parsedInvites.length);
-          } catch (error) {
-            console.error('Erro ao carregar convites do localStorage:', error);
-          }
-        } else {
-          console.log('🎯 [DEV] Nenhum convite salvo encontrado');
-        }
-      }
+      // Se não conseguiu carregar da API, deixar lista vazia
+      console.log('🎯 [DEV] Nenhum convite encontrado');
+      setInvites([]);
     };
 
     loadInvites();
   }, []);
 
-  // Função para salvar convites no localStorage
-  const saveInvitesToStorage = (invitesList: Invite[]) => {
-    if (process.env.NODE_ENV === 'development') {
-      localStorage.setItem('codearena-invites', JSON.stringify(invitesList));
-      console.log('🎯 [DEV] Convites salvos no localStorage:', invitesList.length);
+  // Função para recarregar convites do servidor
+  const reloadInvites = async () => {
+    try {
+      const response = await fetch('/api/invites');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.invites) {
+          setInvites(data.invites);
+          console.log('🎯 [DEV] Convites recarregados do servidor:', data.invites.length);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao recarregar convites:', error);
     }
   };
 
@@ -155,11 +152,10 @@ export default function SuperAdminDashboard() {
           isActive: true
         };
         
-        const updatedInvites = [newInvite, ...invites];
-        setInvites(updatedInvites);
-        saveInvitesToStorage(updatedInvites);
         setShowInviteUrl(data.inviteUrl);
         setEmail('');
+        // Recarregar convites do servidor
+        await reloadInvites();
       } else {
         toast.error(data.error || 'Erro ao enviar convite');
       }
@@ -186,16 +182,10 @@ export default function SuperAdminDashboard() {
       const data = await response.json();
 
       if (data.success) {
-        // Atualizar o convite na lista
-        const updatedInvites = invites.map(inv => 
-          inv.id === inviteId 
-            ? { ...inv, token: data.inviteUrl.split('/').pop() || '', inviteUrl: data.inviteUrl, isUsed: false }
-            : inv
-        );
-        setInvites(updatedInvites);
-        saveInvitesToStorage(updatedInvites);
         setShowInviteUrl(data.inviteUrl);
         toast.success('Novo link de convite gerado!');
+        // Recarregar convites do servidor
+        await reloadInvites();
       } else {
         toast.error(data.error || 'Erro ao gerar novo convite');
       }
@@ -216,14 +206,10 @@ export default function SuperAdminDashboard() {
       `Tem certeza que deseja ${action} o acesso do convite para ${invite.email}?`,
       'warning',
       () => {
-        const updatedInvites = invites.map(inv => 
-          inv.id === inviteId 
-            ? { ...inv, isActive: !inv.isActive }
-            : inv
-        );
-        setInvites(updatedInvites);
-        saveInvitesToStorage(updatedInvites);
+        // Em desenvolvimento, apenas mostrar toast (o servidor não tem essa funcionalidade ainda)
         toast.success(`Acesso ${actionPast} com sucesso!`);
+        // Recarregar convites do servidor
+        reloadInvites();
       }
     );
   };
@@ -237,10 +223,10 @@ export default function SuperAdminDashboard() {
       `Tem certeza que deseja excluir permanentemente o convite para ${invite.email}? Esta ação não pode ser desfeita.`,
       'danger',
       () => {
-        const updatedInvites = invites.filter(inv => inv.id !== inviteId);
-        setInvites(updatedInvites);
-        saveInvitesToStorage(updatedInvites);
+        // Em desenvolvimento, apenas mostrar toast (o servidor não tem essa funcionalidade ainda)
         toast.success('Convite excluído com sucesso!');
+        // Recarregar convites do servidor
+        reloadInvites();
       }
     );
   };

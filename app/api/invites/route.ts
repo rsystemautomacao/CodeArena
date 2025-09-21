@@ -16,12 +16,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Em desenvolvimento, retornar convites do localStorage se disponível
+    // Em desenvolvimento, retornar convites do Map em memória
     if (process.env.NODE_ENV === 'development') {
+      // Importar o Map de convites
+      const { getDevInviteTokens } = await import('@/lib/invite');
+      const devInvites = getDevInviteTokens();
+      
+      const formattedInvites = devInvites.map((invite, index) => ({
+        id: `dev-${index}`,
+        email: invite.email,
+        token: invite.token,
+        inviteUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/invite/${invite.token}`,
+        createdAt: invite.createdAt.toISOString(),
+        isUsed: invite.isUsed,
+        isActive: !invite.isUsed && invite.expiresAt > new Date()
+      }));
+
       return NextResponse.json({
         success: true,
-        invites: [],
-        message: 'Em desenvolvimento - use localStorage'
+        invites: formattedInvites,
+        message: 'Convites carregados do servidor (desenvolvimento)'
       });
     }
 

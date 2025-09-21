@@ -8,7 +8,13 @@ const devInviteTokens = new Map<string, {
   createdAt: Date;
   expiresAt: Date;
   isUsed: boolean;
+  token: string;
 }>();
+
+// Função para exportar os convites do Map (para a API)
+export function getDevInviteTokens() {
+  return Array.from(devInviteTokens.values());
+}
 
 export async function generateInviteToken(): Promise<string> {
   return crypto.randomBytes(32).toString('hex');
@@ -26,7 +32,8 @@ export async function createInvite(email: string): Promise<string> {
       email: email.toLowerCase(),
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 horas
-      isUsed: false
+      isUsed: false,
+      token: token
     });
     
     console.log(`🎯 [DEV] Token-email salvo em memória: ${token} -> ${email}`);
