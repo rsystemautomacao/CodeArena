@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { withAuth } from 'next-auth/middleware';
 
 // Lista de paths que devem ser bloqueados
@@ -19,7 +19,7 @@ const exactBlockedPaths = [
   '/src/main.tsx'
 ];
 
-function customMiddleware(request) {
+function customMiddleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Verificar paths exatos primeiro
