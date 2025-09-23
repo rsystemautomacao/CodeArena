@@ -51,8 +51,8 @@ A aplicação estará rodando em `http://localhost:3000`
 ## 🔑 Credenciais de Acesso
 
 ### Super Admin
-- **Email**: `admin@rsystem.com`
-- **Senha**: `@Desbravadores@93`
+- **Email**: Configurado nas variáveis de ambiente
+- **Senha**: Configurada nas variáveis de ambiente
 
 ### Professores
 - Criados via convite do Super Admin
@@ -117,7 +117,7 @@ JUDGE0_API_KEY=sua-api-key
 ## 📱 Teste Rápido
 
 1. **Acesse**: `http://localhost:3000`
-2. **Login Super Admin**: `admin@rsystem.com` / `@Desbravadores@93`
+2. **Login Super Admin**: Use as credenciais configuradas nas variáveis de ambiente
 3. **Convide um professor** (use seu email)
 4. **Faça login como professor** com Google
 5. **Crie uma turma** e anote o código

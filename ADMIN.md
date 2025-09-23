@@ -60,8 +60,8 @@ O script apresenta um menu interativo com as seguintes opções:
 
 ### 4️⃣ Inicializar Super Admin
 - Cria o usuário super admin no banco de dados
-- **Login**: `admin@rsystem.com`
-- **Senha**: `@Desbravadores@93`
+- **Login**: Configurado nas variáveis de ambiente
+- **Senha**: Configurada nas variáveis de ambiente
 
 ### 5️⃣ Executar Testes
 - Executa todos os testes da aplicação

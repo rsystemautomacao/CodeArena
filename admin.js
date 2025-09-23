@@ -184,8 +184,8 @@ function initSuperAdmin() {
     initProcess.on('close', (code) => {
       if (code === 0) {
         colorLog('✅ Super Admin inicializado com sucesso!', 'green');
-        colorLog('🔑 Login: admin@rsystem.com', 'cyan');
-        colorLog('🔑 Senha: @Desbravadores@93', 'cyan');
+        colorLog('🔑 Login: Configure nas variáveis de ambiente', 'cyan');
+        colorLog('🔑 Senha: Configure nas variáveis de ambiente', 'cyan');
         resolve(true);
       } else {
         colorLog('❌ Erro ao inicializar Super Admin!', 'red');

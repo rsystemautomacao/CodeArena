@@ -50,8 +50,8 @@ JUDGE0_API_URL=https://judge0-ce.p.rapidapi.com
 JUDGE0_API_KEY=judge0-mock-key-for-development
 
 # Superadmin
-SUPERADMIN_EMAIL=admin@rsystem.com
-SUPERADMIN_PASSWORD=@Desbravadores@93
+SUPERADMIN_EMAIL=seu-email@exemplo.com
+SUPERADMIN_PASSWORD=sua-senha-segura
 
 # Ambiente
 NODE_ENV=development
@@ -60,7 +60,7 @@ NODE_ENV=development
 **Características**:
 - ✅ Funciona sem banco de dados real
 - ✅ Login com qualquer email/senha
-- ✅ Super Admin: `admin@rsystem.com` / `@Desbravadores@93`
+- ✅ Super Admin: Credenciais configuradas nas variáveis de ambiente
 - ✅ Dados mockados para APIs externas
 
 ### 🚀 Produção
@@ -84,8 +84,8 @@ JUDGE0_API_URL=https://judge0-ce.p.rapidapi.com
 JUDGE0_API_KEY=your-real-judge0-api-key
 
 # Superadmin
-SUPERADMIN_EMAIL=admin@rsystem.com
-SUPERADMIN_PASSWORD=@Desbravadores@93
+SUPERADMIN_EMAIL=seu-email@exemplo.com
+SUPERADMIN_PASSWORD=sua-senha-segura
 
 # Ambiente
 NODE_ENV=production
@@ -209,12 +209,12 @@ JUDGE0_API_KEY=sua-api-key-real
 ## 🧪 Teste de Login
 
 ### Desenvolvimento
-- **Super Admin**: `admin@rsystem.com` / `@Desbravadores@93`
+- **Super Admin**: Credenciais configuradas nas variáveis de ambiente
 - **Professor**: `professor@teste.com` / `qualquer-senha`
 - **Aluno**: `aluno@teste.com` / `qualquer-senha`
 
 ### Produção
-- **Super Admin**: `admin@rsystem.com` / `@Desbravadores@93`
+- **Super Admin**: Credenciais configuradas nas variáveis de ambiente
 - **Professores**: Login com Google (após convite)
 - **Alunos**: Login com Google
 

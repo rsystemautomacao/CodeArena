@@ -92,9 +92,9 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/codearena
 JUDGE0_API_URL=https://judge0-ce.p.rapidapi.com
 JUDGE0_API_KEY=your-judge0-api-key
 
-# Superadmin
-SUPERADMIN_EMAIL=admin@rsystem.com
-SUPERADMIN_PASSWORD=@Desbravadores@93
+# Superadmin (configure suas próprias credenciais)
+SUPERADMIN_EMAIL=seu-email@exemplo.com
+SUPERADMIN_PASSWORD=sua-senha-segura
 ```
 
 ### 5. Configure o Google OAuth
@@ -135,7 +135,7 @@ Acesse [http://localhost:3000](http://localhost:3000) no seu navegador.
 ## 👥 Perfis de Usuário
 
 ### Super Admin
-- **Login**: Email: `admin@rsystem.com`, Senha: `@Desbravadores@93`
+- **Login**: Credenciais configuradas nas variáveis de ambiente
 - **Funcionalidades**: Convidar professores, monitorar sistema
 
 ### Professor

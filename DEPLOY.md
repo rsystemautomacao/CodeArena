@@ -26,8 +26,8 @@ GOOGLE_CLIENT_SECRET=seu-google-client-secret
 MONGODB_URI=sua-string-de-conexao-mongodb
 JUDGE0_API_URL=https://judge0-ce.p.rapidapi.com
 JUDGE0_API_KEY=sua-judge0-api-key
-SUPERADMIN_EMAIL=admin@rsystem.com
-SUPERADMIN_PASSWORD=@Desbravadores@93
+SUPERADMIN_EMAIL=seu-email@exemplo.com
+SUPERADMIN_PASSWORD=sua-senha-segura
 ```
 
 6. Clique em "Deploy"
