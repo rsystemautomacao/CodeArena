@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       .lean();
 
     const formattedInvites = invites.map(invite => ({
-      id: invite._id.toString(),
+      id: (invite._id as any).toString(),
       email: invite.email,
       token: invite.token,
       inviteUrl: `${process.env.NEXTAUTH_URL}/auth/invite/${invite.token}`,
