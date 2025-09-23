@@ -43,9 +43,15 @@ export default function Home() {
             <div className="flex items-center space-x-4">
               <Link
                 href="/auth/signin"
-                className="bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 transition-colors"
+                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Entrar
+              </Link>
+              <Link
+                href="/auth/register"
+                className="bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 transition-colors"
+              >
+                Cadastrar
               </Link>
             </div>
           </div>
@@ -66,16 +72,16 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/auth/signin"
+              href="/auth/register"
               className="bg-primary-500 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-primary-600 transition-colors"
             >
-              Começar Agora
+              Criar Conta Gratuita
             </Link>
             <Link
-              href="#features"
+              href="/auth/signin"
               className="bg-white text-primary-500 px-8 py-3 rounded-lg text-lg font-semibold border-2 border-primary-500 hover:bg-primary-50 transition-colors"
             >
-              Saiba Mais
+              Já tenho conta
             </Link>
           </div>
         </div>
@@ -136,10 +142,10 @@ export default function Home() {
             Junte-se a milhares de estudantes e professores que já usam o CodeArena
           </p>
           <Link
-            href="/auth/signin"
+            href="/auth/register"
             className="bg-white text-primary-500 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors inline-block"
           >
-            Criar Conta Gratuita
+            Cadastrar Agora
           </Link>
         </div>
       </main>
