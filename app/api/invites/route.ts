@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         inviteUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/invite/${invite.token}`,
         createdAt: invite.createdAt, // Já é string ISO
         isUsed: invite.isUsed,
-        isActive: !invite.isUsed && invite.expiresAt > new Date()
+        isActive: !invite.isUsed && new Date(invite.expiresAt) > new Date()
       }));
 
       return NextResponse.json({
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       inviteUrl: `${process.env.NEXTAUTH_URL}/auth/invite/${invite.token}`,
       createdAt: invite.createdAt.toISOString(),
       isUsed: invite.isUsed,
-      isActive: !invite.isUsed && invite.expiresAt > new Date()
+      isActive: !invite.isUsed && new Date(invite.expiresAt) > new Date()
     }));
 
     return NextResponse.json({
