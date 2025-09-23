@@ -52,11 +52,24 @@ export async function createInvite(email: string): Promise<string> {
   // Em modo de desenvolvimento, simular criação de convite
   if (process.env.NODE_ENV === 'development') {
     console.log(`🎯 [DEV] Simulando convite para: ${email}`);
-    const token = await generateInviteToken();
-    console.log(`🎯 [DEV] Token gerado: ${token}`);
     
     // Carregar convites existentes
     const existingInvites = loadDevInvites();
+    
+    // Verificar se já existe um convite ativo para este email
+    const activeInvite = existingInvites.find(invite => 
+      invite.email.toLowerCase() === email.toLowerCase() && 
+      !invite.isUsed && 
+      new Date(invite.expiresAt) > new Date()
+    );
+    
+    if (activeInvite) {
+      console.log(`🎯 [DEV] Convite ativo já existe para: ${email}`);
+      throw new Error('Já existe um convite ativo para este email');
+    }
+    
+    const token = await generateInviteToken();
+    console.log(`🎯 [DEV] Token gerado: ${token}`);
     
     // Criar novo convite
     const newInvite: DevInvite = {
@@ -182,4 +195,34 @@ export async function markInviteAsUsed(token: string): Promise<void> {
       usedAt: new Date(),
     }
   );
+}
+
+export async function deleteInvite(token: string): Promise<boolean> {
+  // Em modo de desenvolvimento, simular exclusão
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🎯 [DEV] Excluindo convite: ${token}`);
+    
+    // Carregar convites do arquivo
+    const invites = loadDevInvites();
+    const initialLength = invites.length;
+    
+    // Filtrar removendo o convite com o token
+    const updatedInvites = invites.filter(invite => invite.token !== token);
+    
+    if (updatedInvites.length < initialLength) {
+      // Salvar lista atualizada
+      saveDevInvites(updatedInvites);
+      console.log(`🎯 [DEV] Convite excluído do arquivo: ${token}`);
+      return true;
+    }
+    
+    console.log(`🎯 [DEV] Convite não encontrado para exclusão: ${token}`);
+    return false;
+  }
+
+  // Em produção, usar banco de dados real
+  await connectDB();
+
+  const result = await Invite.findOneAndDelete({ token });
+  return !!result;
 }

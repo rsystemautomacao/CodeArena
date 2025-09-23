@@ -33,6 +33,33 @@ body {
   border-radius: 0.5rem;
 }
 
+/* Estilos para inputs */
+input[type="email"], 
+input[type="text"], 
+input[type="password"],
+textarea {
+  background-color: white !important;
+  color: #111827 !important; /* text-gray-900 */
+  border: 1px solid #d1d5db !important; /* border-gray-300 */
+}
+
+input[type="email"]:focus, 
+input[type="text"]:focus, 
+input[type="password"]:focus,
+textarea:focus {
+  background-color: white !important;
+  color: #111827 !important;
+  border-color: #2563eb !important; /* border-blue-500 */
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important; /* ring-blue-500 */
+}
+
+/* Placeholder styles */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important; /* text-gray-400 */
+}
+
 /* Estilos para scrollbar customizada */
 ::-webkit-scrollbar {
   width: 8px;

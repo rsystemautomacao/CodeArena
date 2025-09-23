@@ -1,0 +1,10 @@
+{
+  "name": "CodeArena",
+  "short_name": "CodeArena",
+  "description": "Plataforma educacional para ensino e aprendizado de programação",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": []
+}

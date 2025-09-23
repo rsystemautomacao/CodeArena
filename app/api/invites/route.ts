@@ -148,3 +148,72 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// DELETE - Excluir convite (apenas para superadmin)
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session || session.user?.role !== 'superadmin') {
+      return NextResponse.json(
+        { success: false, error: 'Acesso negado' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get('token');
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Token é obrigatório' },
+        { status: 400 }
+      );
+    }
+
+    console.log(`🎯 [API] Excluindo convite com token: ${token}`);
+
+    // Em desenvolvimento, usar função de exclusão do arquivo
+    if (process.env.NODE_ENV === 'development') {
+      const { deleteInvite } = await import('@/lib/invite');
+      const deleted = await deleteInvite(token);
+      
+      if (deleted) {
+        console.log(`🎯 [API] Convite excluído com sucesso: ${token}`);
+        return NextResponse.json({
+          success: true,
+          message: 'Convite excluído com sucesso'
+        });
+      } else {
+        return NextResponse.json(
+          { success: false, error: 'Convite não encontrado' },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Em produção, usar banco de dados
+    await connectDB();
+    
+    const result = await Invite.findOneAndDelete({ token });
+    
+    if (result) {
+      return NextResponse.json({
+        success: true,
+        message: 'Convite excluído com sucesso'
+      });
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'Convite não encontrado' },
+        { status: 404 }
+      );
+    }
+
+  } catch (error: any) {
+    console.error('Erro ao excluir convite:', error);
+    return NextResponse.json(
+      { success: false, error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
+  }
+}

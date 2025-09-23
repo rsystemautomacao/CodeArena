@@ -222,35 +222,87 @@ export default function SuperAdminDashboard() {
       'Excluir Convite',
       `Tem certeza que deseja excluir permanentemente o convite para ${invite.email}? Esta ação não pode ser desfeita.`,
       'danger',
-      () => {
-        // Em desenvolvimento, apenas mostrar toast (o servidor não tem essa funcionalidade ainda)
-        toast.success('Convite excluído com sucesso!');
-        // Recarregar convites do servidor
-        reloadInvites();
+      async () => {
+        try {
+          // Chamar API para excluir convite
+          const response = await fetch(`/api/invites?token=${invite.token}`, {
+            method: 'DELETE',
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            toast.success('Convite excluído com sucesso!');
+            // Recarregar convites do servidor
+            await reloadInvites();
+          } else {
+            toast.error(data.error || 'Erro ao excluir convite');
+          }
+        } catch (error) {
+          console.error('Erro ao excluir convite:', error);
+          toast.error('Erro ao excluir convite');
+        }
       }
     );
   };
 
-  const handleSignOut = async () => {
-    try {
-      // Limpar cache local
-      if (typeof window !== 'undefined') {
-        // Limpar localStorage se houver dados
-        localStorage.clear();
-        // Limpar sessionStorage
-        sessionStorage.clear();
+  const handleSignOut = () => {
+    showConfirmModal(
+      'Confirmar Logout',
+      'Tem certeza que deseja sair do sistema?',
+      'warning',
+      async () => {
+        try {
+          // Limpar cache local primeiro
+          if (typeof window !== 'undefined') {
+            // Limpar localStorage se houver dados
+            localStorage.clear();
+            // Limpar sessionStorage
+            sessionStorage.clear();
+            // Limpar cookies de sessão
+            document.cookie.split(";").forEach((c) => {
+              document.cookie = c
+                .replace(/^ +/, "")
+                .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            // Limpar cache do browser
+            if ('caches' in window) {
+              caches.keys().then(function(names) {
+                for (let name of names) {
+                  caches.delete(name);
+                }
+              });
+            }
+            
+            // Limpar service workers
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                  registration.unregister();
+                }
+              });
+            }
+          }
+          
+          // Fazer logout sem redirecionamento automático
+          await signOut({ 
+            redirect: false 
+          });
+          
+          // Redirecionar manualmente para a página inicial
+          if (typeof window !== 'undefined') {
+            window.location.replace('/');
+          }
+        } catch (error) {
+          console.error('Erro ao fazer logout:', error);
+          // Forçar redirecionamento em caso de erro
+          if (typeof window !== 'undefined') {
+            window.location.replace('/');
+          }
+        }
       }
-      
-      // Fazer logout
-      await signOut({ 
-        callbackUrl: '/',
-        redirect: true 
-      });
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      // Forçar redirecionamento em caso de erro
-      window.location.href = '/';
-    }
+    );
   };
 
   return (
@@ -350,7 +402,7 @@ export default function SuperAdminDashboard() {
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-400"
                 placeholder="professor@exemplo.com"
                 required
               />
@@ -378,7 +430,7 @@ export default function SuperAdminDashboard() {
                       type="text"
                       value={showInviteUrl}
                       readOnly
-                      className="flex-1 px-3 py-2 bg-white border border-green-300 rounded-md text-sm font-mono text-gray-900"
+                      className="flex-1 px-3 py-2 bg-white border border-green-300 rounded-md text-sm font-mono text-gray-900 placeholder-gray-400"
                     />
                     <button
                       onClick={() => copyToClipboard(showInviteUrl)}

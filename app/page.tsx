@@ -26,6 +26,11 @@ export default function Home() {
     );
   }
 
+  // Se não está autenticado e não está carregando, mostrar a página inicial
+  if (status === 'unauthenticated') {
+    // Não fazer nada aqui, deixar renderizar a página inicial
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-success-50">
       {/* Header */}
