@@ -1,20 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  const { origin } = new URL(request.url);
-  
+export async function GET() {
   return NextResponse.json({
     environment: process.env.NODE_ENV,
-    origin,
-    nextAuthUrl: process.env.NEXTAUTH_URL,
-    googleClientId: process.env.GOOGLE_CLIENT_ID ? 'Configurado' : 'Não configurado',
-    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'Configurado' : 'Não configurado',
-    nextAuthSecret: process.env.NEXTAUTH_SECRET ? 'Configurado' : 'Não configurado',
-    redirectUri: `${origin}/api/auth/callback/google`,
-    expectedUrls: [
-      `${origin}/api/auth/callback/google`,
-      'http://localhost:3000/api/auth/callback/google',
-      'https://code-arena-unasp.vercel.app/api/auth/callback/google'
-    ]
+    nextauthUrl: process.env.NEXTAUTH_URL,
+    hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
+    hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+    googleClientId: process.env.GOOGLE_CLIENT_ID,
+    callbackUrl: `${process.env.NEXTAUTH_URL}/api/auth/callback/google`,
+    timestamp: new Date().toISOString(),
   });
 }
