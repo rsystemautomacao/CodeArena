@@ -198,4 +198,8 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   secret: process.env.NEXTAUTH_SECRET,
+  // Forçar URL explícita para produção
+  ...(process.env.NODE_ENV === 'production' && {
+    url: 'https://code-arena-unasp.vercel.app'
+  }),
 };
