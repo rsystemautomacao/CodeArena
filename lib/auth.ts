@@ -12,25 +12,7 @@ export const authOptions: NextAuthOptions = {
         process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here' ? 
         [GoogleProvider({
           clientId: process.env.GOOGLE_CLIENT_ID!,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-          authorization: {
-            params: {
-              prompt: "consent",
-              access_type: "offline",
-              response_type: "code"
-            }
-          },
-          // Debug adicional
-          checks: ["state"],
-          profile(profile) {
-            return {
-              id: profile.sub,
-              name: profile.name,
-              email: profile.email,
-              image: profile.picture,
-              role: 'aluno' // Role padrão para usuários Google
-            }
-          }
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!
         })] : []),
     CredentialsProvider({
       name: 'credentials',
@@ -237,8 +219,4 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   secret: process.env.NEXTAUTH_SECRET,
-  // Forçar URL explícita para produção
-  ...(process.env.NODE_ENV === 'production' && {
-    url: 'https://code-arena-unasp.vercel.app'
-  }),
 };
