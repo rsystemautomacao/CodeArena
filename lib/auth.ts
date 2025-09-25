@@ -28,6 +28,7 @@ export const authOptions: NextAuthOptions = {
               name: profile.name,
               email: profile.email,
               image: profile.picture,
+              role: 'aluno' // Role padrão para usuários Google
             }
           }
         })] : []),
