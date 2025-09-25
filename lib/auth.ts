@@ -35,13 +35,29 @@ export const authOptions: NextAuthOptions = {
 
         // Verificar se é o superadmin
         if (credentials.email === process.env.SUPERADMIN_EMAIL) {
-          console.log('👑 TENTATIVA SUPERADMIN:', {
-            emailMatch: credentials.email === process.env.SUPERADMIN_EMAIL,
-            passwordMatch: credentials.password === process.env.SUPERADMIN_PASSWORD
+          console.log('👑 TENTATIVA SUPERADMIN DETALHADA:', {
+            timestamp: new Date().toISOString(),
+            provided: {
+              email: credentials.email,
+              password: credentials.password ? 'FORNECIDA' : 'FALTANDO',
+              passwordLength: credentials.password?.length || 0
+            },
+            environment: {
+              envEmail: process.env.SUPERADMIN_EMAIL,
+              envPassword: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADA' : 'FALTANDO',
+              envPasswordLength: process.env.SUPERADMIN_PASSWORD?.length || 0,
+              nodeEnv: process.env.NODE_ENV
+            },
+            comparison: {
+              emailMatch: credentials.email === process.env.SUPERADMIN_EMAIL,
+              passwordMatch: credentials.password === process.env.SUPERADMIN_PASSWORD,
+              emailExact: `"${credentials.email}" === "${process.env.SUPERADMIN_EMAIL}"`,
+              passwordExact: `"${credentials.password}" === "${process.env.SUPERADMIN_PASSWORD}"`
+            }
           });
           
           if (credentials.password === process.env.SUPERADMIN_PASSWORD) {
-            console.log('✅ SUPERADMIN LOGIN SUCESSO');
+            console.log('✅ SUPERADMIN LOGIN SUCESSO - RETORNANDO USUÁRIO');
             return {
               id: 'superadmin-dev',
               name: 'Super Admin',
@@ -49,7 +65,7 @@ export const authOptions: NextAuthOptions = {
               role: 'superadmin',
             };
           }
-          console.log('❌ SUPERADMIN PASSWORD INCORRETA');
+          console.log('❌ SUPERADMIN PASSWORD INCORRETA - RETORNANDO NULL');
           return null;
         }
 
