@@ -27,7 +27,7 @@ export async function GET() {
         'http://localhost:3000/api/auth/callback/google'
       ]
     },
-    issues: []
+    issues: [] as string[]
   };
 
   // Verificar problemas
