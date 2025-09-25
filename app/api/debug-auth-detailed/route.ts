@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const debug = {
+  const debug: any = {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     
@@ -55,6 +55,13 @@ export async function GET() {
         'https://code-arena-unasp.vercel.app/api/auth/callback/google',
         'http://localhost:3000/api/auth/callback/google'
       ]
+    },
+    
+    // Resumo (inicializado vazio)
+    overall: {
+      totalIssues: 0,
+      allCorrect: false,
+      summary: ''
     }
   };
 
