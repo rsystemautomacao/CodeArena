@@ -39,13 +39,27 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Senha', type: 'password' }
       },
       async authorize(credentials) {
+        console.log('🔐 CREDENTIALS LOGIN:', {
+          email: credentials?.email,
+          hasPassword: !!credentials?.password,
+          superadminEmail: process.env.SUPERADMIN_EMAIL,
+          superadminPassword: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADO' : 'FALTANDO'
+        });
+
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ CREDENTIALS VAZIAS');
           return null;
         }
 
         // Verificar se é o superadmin
         if (credentials.email === process.env.SUPERADMIN_EMAIL) {
+          console.log('👑 TENTATIVA SUPERADMIN:', {
+            emailMatch: credentials.email === process.env.SUPERADMIN_EMAIL,
+            passwordMatch: credentials.password === process.env.SUPERADMIN_PASSWORD
+          });
+          
           if (credentials.password === process.env.SUPERADMIN_PASSWORD) {
+            console.log('✅ SUPERADMIN LOGIN SUCESSO');
             return {
               id: 'superadmin-dev',
               name: 'Super Admin',
@@ -53,6 +67,7 @@ export const authOptions: NextAuthOptions = {
               role: 'superadmin',
             };
           }
+          console.log('❌ SUPERADMIN PASSWORD INCORRETA');
           return null;
         }
 
@@ -120,13 +135,26 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log('🚪 SIGNIN CALLBACK:', {
+        provider: account?.provider,
+        userEmail: user?.email,
+        userName: user?.name,
+        environment: process.env.NODE_ENV
+      });
+
       // Em desenvolvimento, permitir qualquer login
       if (process.env.NODE_ENV === 'development') {
+        console.log('✅ DEVELOPMENT MODE - PERMITINDO LOGIN');
         return true;
       }
 
       // Em produção, processar Google OAuth
       if (account?.provider === 'google') {
+        console.log('🔍 GOOGLE OAUTH PROCESSING:', {
+          userEmail: user?.email,
+          hasUser: !!user,
+          hasProfile: !!profile
+        });
         try {
           await connectDB();
           
