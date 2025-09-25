@@ -56,12 +56,12 @@ export async function POST(request: NextRequest) {
         emailExact: `"${email}" === "${process.env.SUPERADMIN_EMAIL}"`,
         passwordExact: `"${password}" === "${process.env.SUPERADMIN_PASSWORD}"`,
         emailChars: {
-          provided: email?.split('').map((c, i) => `${i}: '${c}' (${c.charCodeAt(0)})`),
-          env: process.env.SUPERADMIN_EMAIL?.split('').map((c, i) => `${i}: '${c}' (${c.charCodeAt(0)})`)
+          provided: email?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`),
+          env: process.env.SUPERADMIN_EMAIL?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`)
         },
         passwordChars: {
-          provided: password?.split('').map((c, i) => `${i}: '${c}' (${c.charCodeAt(0)})`),
-          env: process.env.SUPERADMIN_PASSWORD?.split('').map((c, i) => `${i}: '${c}' (${c.charCodeAt(0)})`)
+          provided: password?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`),
+          env: process.env.SUPERADMIN_PASSWORD?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`)
         }
       },
       
