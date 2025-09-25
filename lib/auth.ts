@@ -9,7 +9,7 @@ export const authOptions: NextAuthOptions = {
   providers: [
     // Google Provider - só funciona se as credenciais estiverem configuradas
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && 
-        process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here' ? 
+        process.env.GOOGLE_CLIENT_ID.includes('.apps.googleusercontent.com') ? 
         [GoogleProvider({
           clientId: process.env.GOOGLE_CLIENT_ID!,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET!
