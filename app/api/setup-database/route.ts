@@ -7,12 +7,15 @@ export async function POST() {
     console.log('🔧 INICIANDO SETUP DO BANCO DE DADOS...');
     
     // Conectar ao MongoDB
-    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:@Desbravadores@93@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
     
     await mongoose.connect(MONGODB_URI);
     console.log('✅ Conectado ao MongoDB');
 
     const db = mongoose.connection.db;
+    if (!db) {
+      throw new Error('Não foi possível conectar ao banco de dados');
+    }
     
     // Criar collections
     const collections = ['users', 'invites', 'classrooms', 'exercises', 'submissions'];

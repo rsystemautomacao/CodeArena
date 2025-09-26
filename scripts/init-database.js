@@ -6,7 +6,7 @@ async function initDatabase() {
     console.log('🚀 Iniciando configuração do banco de dados...');
     
     // Conectar ao MongoDB
-    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:@Desbravadores@93@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
     
     console.log('🔌 Conectando ao MongoDB Atlas...');
     await mongoose.connect(MONGODB_URI);
