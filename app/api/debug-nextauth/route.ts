@@ -37,7 +37,7 @@ export async function GET() {
       },
       
       // Variáveis de ambiente críticas
-      environment: {
+      environmentVars: {
         NODE_ENV: process.env.NODE_ENV,
         NEXTAUTH_URL: process.env.NEXTAUTH_URL,
         NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? 'CONFIGURADO' : 'FALTANDO',
