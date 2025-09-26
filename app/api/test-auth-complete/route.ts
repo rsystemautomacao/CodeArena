@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import User from '@/models/User';
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
@@ -10,17 +9,23 @@ export async function POST(request: NextRequest) {
     console.log('🧪 TESTE COMPLETO DE AUTENTICAÇÃO:', { email });
     
     // 1. Conectar ao banco
-    await connectDB();
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
+    
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ Conectado ao banco');
     
+    const db = mongoose.connection.db;
+    const usersCollection = db.collection('users');
+    
     // 2. Buscar usuário
-    const user = await User.findOne({ 
+    const user = await usersCollection.findOne({ 
       email: email,
       isActive: true 
     });
     
     if (!user) {
       console.log('❌ Usuário não encontrado:', email);
+      await mongoose.disconnect();
       return NextResponse.json({
         success: false,
         step: 'user_not_found',
@@ -40,6 +45,7 @@ export async function POST(request: NextRequest) {
     
     if (!isPasswordValid) {
       console.log('❌ Senha incorreta para:', email);
+      await mongoose.disconnect();
       return NextResponse.json({
         success: false,
         step: 'invalid_password',
@@ -51,14 +57,15 @@ export async function POST(request: NextRequest) {
     
     // 4. Verificar role específico
     if (user.role === 'professor') {
-      const Invite = (await import('@/models/Invite')).default;
-      const invite = await Invite.findOne({
+      const invitesCollection = db.collection('invites');
+      const invite = await invitesCollection.findOne({
         email: email,
         isUsed: true
       });
       
       if (!invite) {
         console.log('❌ Professor sem convite válido:', email);
+        await mongoose.disconnect();
         return NextResponse.json({
           success: false,
           step: 'no_valid_invite',
@@ -83,6 +90,8 @@ export async function POST(request: NextRequest) {
     };
     
     console.log('✅ AUTENTICAÇÃO COMPLETA COM SUCESSO:', result);
+    
+    await mongoose.disconnect();
     
     return NextResponse.json(result);
 

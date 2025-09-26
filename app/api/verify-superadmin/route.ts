@@ -1,28 +1,45 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import User from '@/models/User';
+import mongoose from 'mongoose';
 
 export async function GET() {
   try {
     console.log('🔍 VERIFICANDO SUPERADMIN NO BANCO...');
     
-    await connectDB();
+    // Conectar ao MongoDB
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
+    
+    await mongoose.connect(MONGODB_URI);
+    
+    const db = mongoose.connection.db;
+    const usersCollection = db.collection('users');
     
     // Buscar superadmin
-    const superadmin = await User.findOne({ role: 'superadmin' });
+    const superadmin = await usersCollection.findOne({ role: 'superadmin' });
     
     if (!superadmin) {
+      const totalUsers = await usersCollection.countDocuments();
+      const allUsers = await usersCollection.find({}, { projection: { email: 1, role: 1, isActive: 1 } }).toArray();
+      
+      await mongoose.disconnect();
+      
       return NextResponse.json({
         success: false,
         message: 'Superadmin não encontrado no banco de dados',
         details: {
-          totalUsers: await User.countDocuments(),
-          allUsers: await User.find({}, { email: 1, role: 1, isActive: 1 })
+          totalUsers,
+          allUsers
         }
       }, { status: 404 });
     }
 
     // Verificar detalhes do superadmin
+    const totalUsers = await usersCollection.countDocuments();
+    const usersByRole = {
+      superadmin: await usersCollection.countDocuments({ role: 'superadmin' }),
+      professor: await usersCollection.countDocuments({ role: 'professor' }),
+      aluno: await usersCollection.countDocuments({ role: 'aluno' })
+    };
+
     const result = {
       success: true,
       message: 'Superadmin encontrado',
@@ -37,16 +54,14 @@ export async function GET() {
         createdAt: superadmin.createdAt
       },
       database: {
-        totalUsers: await User.countDocuments(),
-        usersByRole: {
-          superadmin: await User.countDocuments({ role: 'superadmin' }),
-          professor: await User.countDocuments({ role: 'professor' }),
-          aluno: await User.countDocuments({ role: 'aluno' })
-        }
+        totalUsers,
+        usersByRole
       }
     };
 
     console.log('✅ SUPERADMIN ENCONTRADO:', result);
+    
+    await mongoose.disconnect();
     
     return NextResponse.json(result);
 
