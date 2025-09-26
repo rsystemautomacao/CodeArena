@@ -11,6 +11,10 @@ export async function GET() {
     await mongoose.connect(MONGODB_URI);
     
     const db = mongoose.connection.db;
+    if (!db) {
+      throw new Error('Não foi possível conectar ao banco de dados');
+    }
+    
     const usersCollection = db.collection('users');
     
     // Buscar superadmin
