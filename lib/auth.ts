@@ -33,41 +33,11 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Verificar se é o superadmin PRIMEIRO (antes de tentar conectar ao MongoDB)
-        if (credentials.email === process.env.SUPERADMIN_EMAIL) {
-          console.log('👑 TENTATIVA SUPERADMIN DETALHADA:', {
-            timestamp: new Date().toISOString(),
-            provided: {
-              email: credentials.email,
-              password: credentials.password ? 'FORNECIDA' : 'FALTANDO',
-              passwordLength: credentials.password?.length || 0
-            },
-            environment: {
-              envEmail: process.env.SUPERADMIN_EMAIL,
-              envPassword: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADA' : 'FALTANDO',
-              envPasswordLength: process.env.SUPERADMIN_PASSWORD?.length || 0,
-              nodeEnv: process.env.NODE_ENV
-            },
-            comparison: {
-              emailMatch: credentials.email === process.env.SUPERADMIN_EMAIL,
-              passwordMatch: credentials.password === process.env.SUPERADMIN_PASSWORD,
-              emailExact: `"${credentials.email}" === "${process.env.SUPERADMIN_EMAIL}"`,
-              passwordExact: `"${credentials.password}" === "${process.env.SUPERADMIN_PASSWORD}"`
-            }
-          });
-          
-          if (credentials.password === process.env.SUPERADMIN_PASSWORD) {
-            console.log('✅ SUPERADMIN LOGIN SUCESSO - RETORNANDO USUÁRIO (SEM MONGODB)');
-            return {
-              id: 'superadmin-production',
-              name: 'Super Admin',
-              email: credentials.email,
-              role: 'superadmin',
-            };
-          }
-          console.log('❌ SUPERADMIN PASSWORD INCORRETA - RETORNANDO NULL');
-          return null;
-        }
+        // CONECTAR AO BANCO DE DADOS E VERIFICAR USUÁRIO
+        console.log('🔐 TENTATIVA DE LOGIN:', {
+          email: credentials.email,
+          timestamp: new Date().toISOString()
+        });
 
         // Em modo de desenvolvimento, permitir login com qualquer email/senha
         if (process.env.NODE_ENV === 'development') {
@@ -105,17 +75,33 @@ export const authOptions: NextAuthOptions = {
           };
         }
 
-        // Em produção, conectar ao banco de dados
+        // CONECTAR AO BANCO E VERIFICAR USUÁRIO
         try {
           await connectDB();
+          
           const user = await User.findOne({ 
             email: credentials.email,
             isActive: true 
           });
 
           if (!user) {
+            console.log('❌ USUÁRIO NÃO ENCONTRADO:', credentials.email);
             return null;
           }
+
+          // Verificar senha
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+          
+          if (!isPasswordValid) {
+            console.log('❌ SENHA INCORRETA para:', credentials.email);
+            return null;
+          }
+
+          console.log('✅ LOGIN SUCESSO:', {
+            id: user._id,
+            email: user.email,
+            role: user.role
+          });
 
           return {
             id: user._id.toString(),
@@ -125,10 +111,7 @@ export const authOptions: NextAuthOptions = {
             image: user.image,
           };
         } catch (error) {
-          console.error('Erro de conexão com banco:', error);
-          // Se houver erro de conexão com MongoDB, não bloquear login
-          // Permitir que continue para outras verificações
-          console.log('⚠️ MONGODB ERROR - CONTINUANDO SEM BANCO');
+          console.error('❌ ERRO DE CONEXÃO COM BANCO:', error);
           return null;
         }
       }
