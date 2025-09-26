@@ -137,8 +137,15 @@ export const authOptions: NextAuthOptions = {
         provider: account?.provider,
         userEmail: user?.email,
         userName: user?.name,
+        userRole: user?.role,
         environment: process.env.NODE_ENV
       });
+
+      // Se for superadmin, permitir login sempre
+      if (user?.role === 'superadmin') {
+        console.log('✅ SUPERADMIN DETECTADO - PERMITINDO LOGIN');
+        return true;
+      }
 
       // Em desenvolvimento, permitir qualquer login
       if (process.env.NODE_ENV === 'development') {
