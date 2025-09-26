@@ -15,6 +15,10 @@ export async function POST(request: NextRequest) {
     console.log('✅ Conectado ao banco');
     
     const db = mongoose.connection.db;
+    if (!db) {
+      throw new Error('Não foi possível conectar ao banco de dados');
+    }
+    
     const usersCollection = db.collection('users');
     
     // 2. Buscar usuário
