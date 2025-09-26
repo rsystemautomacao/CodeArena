@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const debug = {
+  const debug: any = {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     
@@ -49,7 +49,14 @@ export async function GET() {
     },
     
     // Problemas identificados
-    issues: [] as string[]
+    issues: [] as string[],
+    
+    // Resumo (inicializado vazio)
+    summary: {
+      totalIssues: 0,
+      allCorrect: false,
+      message: ''
+    }
   };
 
   // Identificar problemas
