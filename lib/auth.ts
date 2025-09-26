@@ -2,8 +2,7 @@ import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import connectDB from './mongodb';
-import User from '@/models/User';
+import mongoose from 'mongoose';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -77,15 +76,24 @@ export const authOptions: NextAuthOptions = {
 
         // CONECTAR AO BANCO E VERIFICAR USUÁRIO
         try {
-          await connectDB();
+          const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
           
-          const user = await User.findOne({ 
+          await mongoose.connect(MONGODB_URI);
+          
+          const db = mongoose.connection.db;
+          if (!db) {
+            throw new Error('Não foi possível conectar ao banco de dados');
+          }
+          
+          const usersCollection = db.collection('users');
+          const user = await usersCollection.findOne({ 
             email: credentials.email,
             isActive: true 
           });
 
           if (!user) {
             console.log('❌ USUÁRIO NÃO ENCONTRADO:', credentials.email);
+            await mongoose.disconnect();
             return null;
           }
 
@@ -94,20 +102,22 @@ export const authOptions: NextAuthOptions = {
           
           if (!isPasswordValid) {
             console.log('❌ SENHA INCORRETA para:', credentials.email);
+            await mongoose.disconnect();
             return null;
           }
 
           // Verificar se o usuário tem permissão para fazer login
           if (user.role === 'professor') {
             // Verificar se o professor foi criado via convite válido
-            const Invite = (await import('@/models/Invite')).default;
-            const invite = await Invite.findOne({
+            const invitesCollection = db.collection('invites');
+            const invite = await invitesCollection.findOne({
               email: credentials.email,
               isUsed: true
             });
             
             if (!invite) {
               console.log('❌ PROFESSOR SEM CONVITE VÁLIDO:', credentials.email);
+              await mongoose.disconnect();
               return null;
             }
           }
@@ -117,6 +127,8 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             role: user.role
           });
+
+          await mongoose.disconnect();
 
           return {
             id: user._id.toString(),
@@ -162,23 +174,33 @@ export const authOptions: NextAuthOptions = {
           hasProfile: !!profile
         });
         try {
-          await connectDB();
+          const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
+          
+          await mongoose.connect(MONGODB_URI);
+          
+          const db = mongoose.connection.db;
+          if (!db) {
+            throw new Error('Não foi possível conectar ao banco de dados');
+          }
+          
+          const usersCollection = db.collection('users');
+          const invitesCollection = db.collection('invites');
           
           // Verificar se o usuário já existe
-          const existingUser = await User.findOne({ email: user.email });
+          const existingUser = await usersCollection.findOne({ email: user.email });
           
           if (existingUser) {
             // Atualizar dados do Google
-            await User.findByIdAndUpdate(existingUser._id, {
-              name: user.name,
-              image: user.image,
-            });
+            await usersCollection.updateOne(
+              { _id: existingUser._id },
+              { $set: { name: user.name, image: user.image } }
+            );
+            await mongoose.disconnect();
             return true;
           }
 
           // Verificar se há um convite pendente para professores
-          const Invite = (await import('@/models/Invite')).default;
-          const invite = await Invite.findOne({ 
+          const invite = await invitesCollection.findOne({ 
             email: user.email,
             isUsed: false,
             expiresAt: { $gt: new Date() }
@@ -186,32 +208,38 @@ export const authOptions: NextAuthOptions = {
 
           if (invite) {
             // Criar usuário como professor
-            await User.create({
+            await usersCollection.insertOne({
               name: user.name!,
               email: user.email!,
               image: user.image,
               role: 'professor',
               isActive: true,
+              createdAt: new Date(),
+              updatedAt: new Date()
             });
 
             // Marcar convite como usado
-            await Invite.findByIdAndUpdate(invite._id, {
-              isUsed: true,
-              usedAt: new Date(),
-            });
+            await invitesCollection.updateOne(
+              { _id: invite._id },
+              { $set: { isUsed: true, usedAt: new Date() } }
+            );
 
+            await mongoose.disconnect();
             return true;
           }
 
           // Para alunos, permitir criação automática
-          await User.create({
+          await usersCollection.insertOne({
             name: user.name!,
             email: user.email!,
             image: user.image,
             role: 'aluno',
             isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
           });
 
+          await mongoose.disconnect();
           return true;
         } catch (error) {
           console.error('Erro no Google OAuth:', error);
