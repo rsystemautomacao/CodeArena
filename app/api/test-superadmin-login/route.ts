@@ -4,6 +4,10 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
     
+    // Forçar carregamento das variáveis de ambiente
+    const envEmail = process.env.SUPERADMIN_EMAIL || 'VARIÁVEL_NÃO_CARREGADA';
+    const envPassword = process.env.SUPERADMIN_PASSWORD || 'VARIÁVEL_NÃO_CARREGADA';
+    
     console.log('🧪 TESTE SUPERADMIN LOGIN:', {
       timestamp: new Date().toISOString(),
       provided: {
@@ -12,10 +16,11 @@ export async function POST(request: NextRequest) {
         passwordLength: password?.length || 0
       },
       environment: {
-        envEmail: process.env.SUPERADMIN_EMAIL,
-        envPassword: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADA' : 'FALTANDO',
-        envPasswordLength: process.env.SUPERADMIN_PASSWORD?.length || 0,
-        nodeEnv: process.env.NODE_ENV
+        envEmail,
+        envPassword: envPassword !== 'VARIÁVEL_NÃO_CARREGADA' ? 'CONFIGURADA' : 'FALTANDO',
+        envPasswordLength: envPassword !== 'VARIÁVEL_NÃO_CARREGADA' ? envPassword.length : 0,
+        nodeEnv: process.env.NODE_ENV,
+        allEnvKeys: Object.keys(process.env).filter(key => key.includes('SUPERADMIN'))
       },
       comparison: {
         emailMatch: email === process.env.SUPERADMIN_EMAIL,
@@ -26,8 +31,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Teste detalhado das credenciais
-    const emailMatch = email === process.env.SUPERADMIN_EMAIL;
-    const passwordMatch = password === process.env.SUPERADMIN_PASSWORD;
+    const emailMatch = email === envEmail;
+    const passwordMatch = password === envPassword;
     
     const result = {
       success: emailMatch && passwordMatch,
@@ -43,25 +48,26 @@ export async function POST(request: NextRequest) {
       
       // Configurações do ambiente
       environment: {
-        envEmail: process.env.SUPERADMIN_EMAIL,
-        envPassword: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADA' : 'FALTANDO',
-        envPasswordLength: process.env.SUPERADMIN_PASSWORD?.length || 0,
-        nodeEnv: process.env.NODE_ENV
+        envEmail,
+        envPassword: envPassword !== 'VARIÁVEL_NÃO_CARREGADA' ? 'CONFIGURADA' : 'FALTANDO',
+        envPasswordLength: envPassword !== 'VARIÁVEL_NÃO_CARREGADA' ? envPassword.length : 0,
+        nodeEnv: process.env.NODE_ENV,
+        allEnvKeys: Object.keys(process.env).filter(key => key.includes('SUPERADMIN'))
       },
       
       // Comparações detalhadas
       comparison: {
         emailMatch,
         passwordMatch,
-        emailExact: `"${email}" === "${process.env.SUPERADMIN_EMAIL}"`,
-        passwordExact: `"${password}" === "${process.env.SUPERADMIN_PASSWORD}"`,
+        emailExact: `"${email}" === "${envEmail}"`,
+        passwordExact: `"${password}" === "${envPassword}"`,
         emailChars: {
           provided: email?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`),
-          env: process.env.SUPERADMIN_EMAIL?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`)
+          env: envEmail?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`)
         },
         passwordChars: {
           provided: password?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`),
-          env: process.env.SUPERADMIN_PASSWORD?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`)
+          env: envPassword?.split('').map((c: string, i: number) => `${i}: '${c}' (${c.charCodeAt(0)})`)
         }
       },
       
