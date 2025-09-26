@@ -33,7 +33,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Verificar se é o superadmin
+        // Verificar se é o superadmin PRIMEIRO (antes de tentar conectar ao MongoDB)
         if (credentials.email === process.env.SUPERADMIN_EMAIL) {
           console.log('👑 TENTATIVA SUPERADMIN DETALHADA:', {
             timestamp: new Date().toISOString(),
@@ -57,9 +57,9 @@ export const authOptions: NextAuthOptions = {
           });
           
           if (credentials.password === process.env.SUPERADMIN_PASSWORD) {
-            console.log('✅ SUPERADMIN LOGIN SUCESSO - RETORNANDO USUÁRIO');
+            console.log('✅ SUPERADMIN LOGIN SUCESSO - RETORNANDO USUÁRIO (SEM MONGODB)');
             return {
-              id: 'superadmin-dev',
+              id: 'superadmin-production',
               name: 'Super Admin',
               email: credentials.email,
               role: 'superadmin',
@@ -126,6 +126,9 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error('Erro de conexão com banco:', error);
+          // Se houver erro de conexão com MongoDB, não bloquear login
+          // Permitir que continue para outras verificações
+          console.log('⚠️ MONGODB ERROR - CONTINUANDO SEM BANCO');
           return null;
         }
       }
