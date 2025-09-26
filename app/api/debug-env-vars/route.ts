@@ -89,7 +89,7 @@ export async function GET() {
   }
 
   // Resumo
-  const totalIssues = debug.issues.filter(issue => issue.startsWith('❌')).length;
+  const totalIssues = debug.issues.filter((issue: string) => issue.startsWith('❌')).length;
   debug.summary = {
     totalIssues,
     allCorrect: totalIssues === 0,
