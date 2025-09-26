@@ -97,6 +97,21 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          // Verificar se o usuário tem permissão para fazer login
+          if (user.role === 'professor') {
+            // Verificar se o professor foi criado via convite válido
+            const Invite = (await import('@/models/Invite')).default;
+            const invite = await Invite.findOne({
+              email: credentials.email,
+              isUsed: true
+            });
+            
+            if (!invite) {
+              console.log('❌ PROFESSOR SEM CONVITE VÁLIDO:', credentials.email);
+              return null;
+            }
+          }
+
           console.log('✅ LOGIN SUCESSO:', {
             id: user._id,
             email: user.email,
