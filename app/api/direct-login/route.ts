@@ -17,7 +17,15 @@ export async function POST(request: NextRequest) {
     }
     
     // Conectar ao banco
-    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
+    const MONGODB_URI = process.env.MONGODB_URI;
+    
+    if (!MONGODB_URI) {
+      console.log('❌ MONGODB_URI não configurado');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Configuração de banco não encontrada' 
+      });
+    }
     
     await mongoose.connect(MONGODB_URI);
     const db = mongoose.connection.db;
