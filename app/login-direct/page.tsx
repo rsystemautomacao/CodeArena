@@ -32,7 +32,20 @@ export default function LoginDirect() {
         console.log('❌ ERRO NEXTAUTH:', result.error);
       } else if (result?.ok) {
         console.log('✅ LOGIN NEXTAUTH SUCESSO!');
-        router.push('/dashboard');
+        // Aguardar um pouco para garantir que a sessão seja estabelecida
+        setTimeout(() => {
+          console.log('🔄 REDIRECIONANDO PARA DASHBOARD...');
+          router.push('/dashboard');
+          router.refresh(); // Forçar atualização da página
+          
+          // Fallback: usar window.location se router não funcionar
+          setTimeout(() => {
+            if (window.location.pathname === '/login-direct') {
+              console.log('⚠️ ROUTER NÃO FUNCIONOU, USANDO WINDOW.LOCATION...');
+              window.location.href = '/dashboard';
+            }
+          }, 1000);
+        }, 100);
       } else {
         setError('Erro desconhecido no NextAuth');
       }
@@ -69,8 +82,20 @@ export default function LoginDirect() {
         
         console.log('✅ LOGIN DIRETO SUCESSO:', data.user);
         
-        // Redirecionar para dashboard
-        router.push('/dashboard');
+        // Aguardar um pouco e redirecionar para dashboard
+        setTimeout(() => {
+          console.log('🔄 REDIRECIONANDO PARA DASHBOARD...');
+          router.push('/dashboard');
+          router.refresh(); // Forçar atualização da página
+          
+          // Fallback: usar window.location se router não funcionar
+          setTimeout(() => {
+            if (window.location.pathname === '/login-direct') {
+              console.log('⚠️ ROUTER NÃO FUNCIONOU, USANDO WINDOW.LOCATION...');
+              window.location.href = '/dashboard';
+            }
+          }, 1000);
+        }, 100);
       } else {
         setError(data.message || 'Erro no login direto');
       }
