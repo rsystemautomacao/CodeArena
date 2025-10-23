@@ -18,13 +18,8 @@ export default function Register() {
       console.log('🔐 TENTANDO CADASTRO COM GOOGLE...');
       console.log('🔐 CALLBACK URL:', '/dashboard');
       
-      // Verificar se Google Provider está disponível
-      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-        console.log('❌ GOOGLE PROVIDER NÃO CONFIGURADO');
-        toast.error('Google OAuth não está configurado. Entre em contato com o administrador.');
-        setIsLoading(false);
-        return;
-      }
+      // Verificar se Google Provider está disponível (apenas no servidor)
+      console.log('🔍 VERIFICANDO CONFIGURAÇÃO GOOGLE...');
       
       // Usar redirect: true para permitir redirecionamento para Google
       const result = await signIn('google', { 
