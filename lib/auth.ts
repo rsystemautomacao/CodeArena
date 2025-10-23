@@ -94,6 +94,74 @@ export const authOptions: NextAuthOptions = {
           const usersCollection = db.collection('users');
           console.log('🔍 BUSCANDO USUÁRIO:', credentials.email);
           
+          // VERIFICAR SE É SUPERADMIN E FORÇAR CRIAÇÃO SE NECESSÁRIO
+          if (credentials.email === 'admin@rsystem.com') {
+            console.log('🔧 VERIFICANDO SUPERADMIN...');
+            let superadmin = await usersCollection.findOne({ 
+              email: 'admin@rsystem.com',
+              role: 'superadmin'
+            });
+            
+            if (!superadmin || !superadmin.password || superadmin.password.length === 0) {
+              console.log('🔧 RECRIANDO SUPERADMIN...');
+              // Deletar superadmin existente
+              await usersCollection.deleteMany({ 
+                email: 'admin@rsystem.com',
+                role: 'superadmin'
+              });
+              
+              // Criar novo superadmin
+              const hashedPassword = await bcrypt.hash('@Desbravadores@93', 12);
+              const newSuperadmin = {
+                name: 'Super Admin',
+                email: 'admin@rsystem.com',
+                password: hashedPassword,
+                role: 'superadmin',
+                isActive: true,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              };
+              
+              const result = await usersCollection.insertOne(newSuperadmin);
+              console.log('✅ SUPERADMIN RECRIADO:', result.insertedId);
+              
+              superadmin = await usersCollection.findOne({ 
+                email: 'admin@rsystem.com',
+                role: 'superadmin'
+              });
+            }
+            
+            if (superadmin) {
+              console.log('✅ SUPERADMIN ENCONTRADO:', {
+                id: superadmin._id,
+                email: superadmin.email,
+                hasPassword: !!superadmin.password,
+                passwordLength: superadmin.password ? superadmin.password.length : 0
+              });
+              
+              // Verificar senha
+              console.log('🔑 VERIFICANDO SENHA DO SUPERADMIN...');
+              const isPasswordValid = await bcrypt.compare(credentials.password, superadmin.password);
+              console.log('🔑 RESULTADO DA VERIFICAÇÃO:', isPasswordValid);
+              
+              if (isPasswordValid) {
+                console.log('✅ LOGIN SUPERADMIN SUCESSO!');
+                await mongoose.disconnect();
+                return {
+                  id: superadmin._id.toString(),
+                  name: superadmin.name,
+                  email: superadmin.email,
+                  role: superadmin.role,
+                  image: superadmin.image,
+                };
+              } else {
+                console.log('❌ SENHA DO SUPERADMIN INCORRETA');
+                await mongoose.disconnect();
+                return null;
+              }
+            }
+          }
+          
           const user = await usersCollection.findOne({ 
             email: credentials.email,
             isActive: true 
