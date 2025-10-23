@@ -10,11 +10,14 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    // Só redirecionar se estiver autenticado E não for a primeira visita
+    if (status === 'authenticated' && session) {
+      console.log('🔄 USUÁRIO AUTENTICADO, REDIRECIONANDO PARA DASHBOARD...');
       router.push('/dashboard');
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
+  // Mostrar loading apenas se estiver carregando a sessão
   if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -26,10 +29,8 @@ export default function Home() {
     );
   }
 
-  // Se não está autenticado e não está carregando, mostrar a página inicial
-  if (status === 'unauthenticated') {
-    // Não fazer nada aqui, deixar renderizar a página inicial
-  }
+  // Se não está autenticado, mostrar a página inicial normalmente
+  console.log('🏠 RENDERIZANDO PÁGINA INICIAL - Status:', status);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-success-50">

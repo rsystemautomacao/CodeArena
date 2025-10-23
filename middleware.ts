@@ -88,6 +88,16 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
         
+        // Permitir acesso à página inicial sem autenticação
+        if (pathname === '/') {
+          return true;
+        }
+        
+        // Permitir acesso às páginas de autenticação sem autenticação
+        if (pathname.startsWith('/auth/')) {
+          return true;
+        }
+        
         // Permitir acesso ao login direto sem autenticação
         if (pathname === '/login-direct') {
           return true;
