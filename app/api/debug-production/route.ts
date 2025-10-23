@@ -55,8 +55,18 @@ export async function GET() {
       });
     }
 
-    // Testar senha
-    const passwordMatch = await bcrypt.compare('@Desbravadores@93', superadmin.password);
+    // Testar senha - verificar se password existe
+    let passwordMatch = false;
+    if (superadmin.password && superadmin.password.length > 0) {
+      try {
+        passwordMatch = await bcrypt.compare('@Desbravadores@93', superadmin.password);
+      } catch (error) {
+        console.log('❌ ERRO AO COMPARAR SENHA:', error);
+        passwordMatch = false;
+      }
+    } else {
+      console.log('❌ SENHA VAZIA OU INEXISTENTE');
+    }
     
     console.log('🔍 SUPERADMIN ENCONTRADO:', {
       id: superadmin._id,
