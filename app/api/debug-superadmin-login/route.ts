@@ -22,6 +22,15 @@ export async function POST(request: NextRequest) {
     console.log('✅ CONEXÃO ESTABELECIDA');
     
     const db = mongoose.connection.db;
+    if (!db) {
+      console.log('❌ ERRO: Não foi possível obter referência do banco');
+      await mongoose.disconnect();
+      return NextResponse.json({
+        success: false,
+        message: 'Erro de conexão com banco de dados'
+      }, { status: 500 });
+    }
+    
     const usersCollection = db.collection('users');
     
     // Buscar TODOS os usuários para debug
