@@ -1,112 +1,113 @@
-import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import connectDB from '@/lib/mongodb';
+import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
-    const { email, password } = await request.json();
+    console.log('🔍 TESTE COMPLETO DE AUTENTICAÇÃO...');
     
-    console.log('🧪 TESTE COMPLETO DE AUTENTICAÇÃO:', { email });
-    
-    // 1. Conectar ao banco
-    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
-    
-    await mongoose.connect(MONGODB_URI);
-    console.log('✅ Conectado ao banco');
-    
-    const db = mongoose.connection.db;
-    if (!db) {
-      throw new Error('Não foi possível conectar ao banco de dados');
-    }
-    
-    const usersCollection = db.collection('users');
-    
-    // 2. Buscar usuário
-    const user = await usersCollection.findOne({ 
-      email: email,
-      isActive: true 
-    });
-    
-    if (!user) {
-      console.log('❌ Usuário não encontrado:', email);
-      await mongoose.disconnect();
-      return NextResponse.json({
-        success: false,
-        step: 'user_not_found',
-        message: 'Usuário não encontrado no banco de dados'
-      }, { status: 401 });
-    }
-    
-    console.log('✅ Usuário encontrado:', {
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive
-    });
-    
-    // 3. Verificar senha
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    
-    if (!isPasswordValid) {
-      console.log('❌ Senha incorreta para:', email);
-      await mongoose.disconnect();
-      return NextResponse.json({
-        success: false,
-        step: 'invalid_password',
-        message: 'Senha incorreta'
-      }, { status: 401 });
-    }
-    
-    console.log('✅ Senha válida');
-    
-    // 4. Verificar role específico
-    if (user.role === 'professor') {
-      const invitesCollection = db.collection('invites');
-      const invite = await invitesCollection.findOne({
-        email: email,
-        isUsed: true
-      });
-      
-      if (!invite) {
-        console.log('❌ Professor sem convite válido:', email);
-        await mongoose.disconnect();
-        return NextResponse.json({
-          success: false,
-          step: 'no_valid_invite',
-          message: 'Professor sem convite válido'
-        }, { status: 401 });
-      }
-      
-      console.log('✅ Convite válido encontrado');
-    }
-    
-    // 5. Retornar sucesso
-    const result = {
-      success: true,
-      message: 'Autenticação bem-sucedida',
-      user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        image: user.image
-      }
+    // 1. Verificar variáveis de ambiente
+    const envVars = {
+      NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? 'CONFIGURADO' : 'FALTANDO',
+      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'CONFIGURADO' : 'FALTANDO',
+      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'CONFIGURADO' : 'FALTANDO',
+      MONGODB_URI: process.env.MONGODB_URI ? 'CONFIGURADO' : 'FALTANDO',
+      SUPERADMIN_EMAIL: process.env.SUPERADMIN_EMAIL,
+      SUPERADMIN_PASSWORD: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADO' : 'FALTANDO',
+      NODE_ENV: process.env.NODE_ENV
     };
+
+    console.log('📋 VARIÁVEIS DE AMBIENTE:', envVars);
+
+    // 2. Testar conexão com MongoDB
+    await connectDB();
+    console.log('✅ CONECTADO AO MONGODB');
+
+    // 3. Verificar superadmin
+    const superadmin = await User.findOne({ email: 'admin@rsystem.com' });
     
-    console.log('✅ AUTENTICAÇÃO COMPLETA COM SUCESSO:', result);
-    
-    await mongoose.disconnect();
-    
-    return NextResponse.json(result);
+    if (!superadmin) {
+      return NextResponse.json({
+        success: false,
+        message: 'Superadmin não encontrado',
+        envVars
+      }, { status: 404 });
+    }
+
+    console.log('👤 SUPERADMIN ENCONTRADO:', {
+      id: superadmin._id,
+      email: superadmin.email,
+      role: superadmin.role,
+      isActive: superadmin.isActive,
+      hasPassword: !!superadmin.password,
+      passwordLength: superadmin.password?.length || 0
+    });
+
+    // 4. Testar senha do superadmin
+    let passwordMatch = false;
+    if (superadmin.password && superadmin.password.length > 0) {
+      try {
+        passwordMatch = await bcrypt.compare('@Desbravadores@93', superadmin.password);
+        console.log('🔑 TESTE DE SENHA:', { passwordMatch });
+      } catch (error) {
+        console.log('❌ ERRO AO TESTAR SENHA:', error);
+      }
+    } else {
+      console.log('❌ SENHA VAZIA OU INEXISTENTE');
+    }
+
+    // 5. Testar configuração do NextAuth
+    const session = await getServerSession(authOptions);
+    console.log('🔐 SESSÃO ATUAL:', {
+      hasSession: !!session,
+      user: session?.user?.email || 'NENHUM'
+    });
+
+    // 6. Verificar Google OAuth
+    const googleConfig = {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'CONFIGURADO' : 'FALTANDO',
+      clientIdValid: process.env.GOOGLE_CLIENT_ID?.includes('.apps.googleusercontent.com') || false,
+      callbackUrl: `${process.env.NEXTAUTH_URL}/api/auth/callback/google`
+    };
+
+    console.log('🔍 CONFIGURAÇÃO GOOGLE:', googleConfig);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Teste de autenticação concluído',
+      details: {
+        environment: envVars,
+        superadmin: {
+          id: superadmin._id,
+          email: superadmin.email,
+          role: superadmin.role,
+          isActive: superadmin.isActive,
+          hasPassword: !!superadmin.password,
+          passwordLength: superadmin.password?.length || 0,
+          passwordMatch
+        },
+        session: {
+          hasSession: !!session,
+          userEmail: session?.user?.email || null
+        },
+        googleOAuth: googleConfig,
+        timestamp: new Date().toISOString()
+      }
+    });
 
   } catch (error: any) {
     console.error('❌ ERRO NO TESTE DE AUTENTICAÇÃO:', error);
     
     return NextResponse.json({
       success: false,
-      step: 'server_error',
-      message: 'Erro interno no servidor',
-      error: error.message
+      message: 'Erro no teste de autenticação',
+      error: error.message,
+      timestamp: new Date().toISOString()
     }, { status: 500 });
   }
 }
