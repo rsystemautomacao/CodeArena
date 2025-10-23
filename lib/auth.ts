@@ -20,15 +20,18 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Senha', type: 'password' }
       },
       async authorize(credentials) {
-        console.log('🔐 CREDENTIALS LOGIN:', {
-          email: credentials?.email,
-          hasPassword: !!credentials?.password,
-          superadminEmail: process.env.SUPERADMIN_EMAIL,
-          superadminPassword: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADO' : 'FALTANDO'
-        });
+        console.log('🔐 ===== INÍCIO DO LOGIN =====');
+        console.log('📧 EMAIL RECEBIDO:', credentials?.email);
+        console.log('🔑 SENHA RECEBIDA:', credentials?.password ? 'PRESENTE' : 'AUSENTE');
+        console.log('🌍 AMBIENTE:', process.env.NODE_ENV);
+        console.log('⚙️ SUPERADMIN_EMAIL:', process.env.SUPERADMIN_EMAIL);
+        console.log('⚙️ SUPERADMIN_PASSWORD:', process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADO' : 'FALTANDO');
+        console.log('🔐 ================================');
 
         if (!credentials?.email || !credentials?.password) {
-          console.log('❌ CREDENTIALS VAZIAS');
+          console.log('❌ ERRO: Credenciais vazias');
+          console.log('📧 Email presente:', !!credentials?.email);
+          console.log('🔑 Senha presente:', !!credentials?.password);
           return null;
         }
 
@@ -76,32 +79,65 @@ export const authOptions: NextAuthOptions = {
 
         // CONECTAR AO BANCO E VERIFICAR USUÁRIO
         try {
+          console.log('🔗 CONECTANDO AO BANCO DE DADOS...');
           const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
           
           await mongoose.connect(MONGODB_URI);
+          console.log('✅ CONEXÃO COM BANCO ESTABELECIDA');
           
           const db = mongoose.connection.db;
           if (!db) {
+            console.log('❌ ERRO: Não foi possível obter referência do banco');
             throw new Error('Não foi possível conectar ao banco de dados');
           }
           
           const usersCollection = db.collection('users');
+          console.log('🔍 BUSCANDO USUÁRIO:', credentials.email);
+          
           const user = await usersCollection.findOne({ 
             email: credentials.email,
             isActive: true 
           });
 
           if (!user) {
-            console.log('❌ USUÁRIO NÃO ENCONTRADO:', credentials.email);
+            console.log('❌ USUÁRIO NÃO ENCONTRADO NO BANCO');
+            console.log('📧 Email buscado:', credentials.email);
+            console.log('🔍 Buscando usuários com email similar...');
+            
+            // Buscar usuários similares para debug
+            const similarUsers = await usersCollection.find({ 
+              email: { $regex: credentials.email, $options: 'i' }
+            }).toArray();
+            console.log('👥 USUÁRIOS SIMILARES ENCONTRADOS:', similarUsers.length);
+            similarUsers.forEach(u => {
+              console.log('  - Email:', u.email, '| Ativo:', u.isActive, '| Role:', u.role);
+            });
+            
             await mongoose.disconnect();
             return null;
           }
 
+          console.log('✅ USUÁRIO ENCONTRADO:', {
+            id: user._id,
+            email: user.email,
+            role: user.role,
+            isActive: user.isActive,
+            hasPassword: !!user.password,
+            passwordLength: user.password ? user.password.length : 0
+          });
+
           // Verificar senha
+          console.log('🔑 VERIFICANDO SENHA...');
+          console.log('🔑 Senha fornecida:', credentials.password);
+          console.log('🔑 Hash no banco:', user.password ? 'PRESENTE' : 'AUSENTE');
+          
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+          console.log('🔑 RESULTADO DA VERIFICAÇÃO:', isPasswordValid);
           
           if (!isPasswordValid) {
-            console.log('❌ SENHA INCORRETA para:', credentials.email);
+            console.log('❌ SENHA INCORRETA');
+            console.log('🔑 Senha fornecida:', credentials.password);
+            console.log('🔑 Hash no banco:', user.password);
             await mongoose.disconnect();
             return null;
           }
@@ -122,23 +158,32 @@ export const authOptions: NextAuthOptions = {
             }
           }
 
-          console.log('✅ LOGIN SUCESSO:', {
-            id: user._id,
-            email: user.email,
-            role: user.role
-          });
+          console.log('✅ ===== LOGIN SUCESSO =====');
+          console.log('🆔 ID:', user._id);
+          console.log('📧 Email:', user.email);
+          console.log('👤 Nome:', user.name);
+          console.log('🎭 Role:', user.role);
+          console.log('🖼️ Imagem:', user.image);
+          console.log('✅ =========================');
 
           await mongoose.disconnect();
 
-          return {
+          const userToReturn = {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
             role: user.role,
             image: user.image,
           };
+          
+          console.log('🚀 RETORNANDO USUÁRIO:', userToReturn);
+          return userToReturn;
         } catch (error) {
-          console.error('❌ ERRO DE CONEXÃO COM BANCO:', error);
+          console.log('❌ ===== ERRO NO LOGIN =====');
+          console.log('❌ Tipo do erro:', error instanceof Error ? error.constructor.name : typeof error);
+          console.log('❌ Mensagem:', error instanceof Error ? error.message : String(error));
+          console.log('❌ Stack:', error instanceof Error ? error.stack : 'N/A');
+          console.log('❌ =========================');
           return null;
         }
       }
