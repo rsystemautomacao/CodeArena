@@ -9,23 +9,26 @@ export async function POST(request: NextRequest) {
     const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
     
     await mongoose.connect(MONGODB_URI);
-    const db = mongoose.connection.db;
+    console.log('✅ CONEXÃO COM BANCO ESTABELECIDA');
     
+    const db = mongoose.connection.db;
     if (!db) {
-      await mongoose.disconnect();
-      return NextResponse.json({ success: false, message: 'Erro de conexão' });
+      throw new Error('Não foi possível conectar ao banco de dados');
     }
     
     const usersCollection = db.collection('users');
     
-    // Deletar superadmin existente
-    console.log('🗑️ DELETANDO SUPERADMIN EXISTENTE...');
-    await usersCollection.deleteMany({ role: 'superadmin' });
+    // Deletar todos os superadmins existentes
+    console.log('🗑️ REMOVENDO SUPERADMINS EXISTENTES...');
+    const deleteResult = await usersCollection.deleteMany({ 
+      email: 'admin@rsystem.com',
+      role: 'superadmin'
+    });
+    console.log('🗑️ SUPERADMINS REMOVIDOS:', deleteResult.deletedCount);
     
     // Criar novo superadmin
-    console.log('👤 CRIANDO NOVO SUPERADMIN...');
+    console.log('🔧 CRIANDO NOVO SUPERADMIN...');
     const hashedPassword = await bcrypt.hash('@Desbravadores@93', 12);
-    
     const newSuperadmin = {
       name: 'Super Admin',
       email: 'admin@rsystem.com',
@@ -37,56 +40,122 @@ export async function POST(request: NextRequest) {
     };
     
     const result = await usersCollection.insertOne(newSuperadmin);
+    console.log('✅ SUPERADMIN CRIADO:', result.insertedId);
     
-    console.log('✅ SUPERADMIN CRIADO:', {
-      id: result.insertedId,
-      email: newSuperadmin.email,
-      hasPassword: true,
-      passwordLength: hashedPassword.length
-    });
-    
-    // Testar login imediatamente
-    console.log('🔑 TESTANDO LOGIN...');
-    const testUser = await usersCollection.findOne({ 
+    // Verificar se foi criado corretamente
+    const createdSuperadmin = await usersCollection.findOne({ 
       email: 'admin@rsystem.com',
-      isActive: true 
+      role: 'superadmin'
     });
     
-    if (!testUser) {
-      console.log('❌ ERRO: Usuário não encontrado após criação');
-      await mongoose.disconnect();
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Erro: usuário não encontrado após criação' 
-      });
+    if (!createdSuperadmin) {
+      throw new Error('Falha ao criar superadmin');
     }
     
-    const passwordMatch = await bcrypt.compare('@Desbravadores@93', testUser.password);
-    console.log('🔑 RESULTADO DO TESTE:', passwordMatch);
+    console.log('✅ SUPERADMIN VERIFICADO:', {
+      id: createdSuperadmin._id,
+      email: createdSuperadmin.email,
+      role: createdSuperadmin.role,
+      hasPassword: !!createdSuperadmin.password,
+      passwordLength: createdSuperadmin.password ? createdSuperadmin.password.length : 0
+    });
     
     await mongoose.disconnect();
     
     return NextResponse.json({
       success: true,
-      message: 'Superadmin criado e testado com sucesso',
+      message: 'Superadmin criado com sucesso',
       superadmin: {
-        id: testUser._id,
-        email: testUser.email,
-        name: testUser.name,
-        role: testUser.role,
-        isActive: testUser.isActive,
-        hasPassword: !!testUser.password,
-        passwordLength: testUser.password ? testUser.password.length : 0,
-        passwordMatch: passwordMatch
-      }
+        id: createdSuperadmin._id.toString(),
+        email: createdSuperadmin.email,
+        name: createdSuperadmin.name,
+        role: createdSuperadmin.role,
+        hasPassword: !!createdSuperadmin.password,
+        passwordLength: createdSuperadmin.password ? createdSuperadmin.password.length : 0
+      },
+      timestamp: new Date().toISOString()
     });
     
   } catch (error) {
-    console.log('❌ ERRO:', error);
+    console.log('❌ ERRO AO CRIAR SUPERADMIN:', error);
+    
+    try {
+      await mongoose.disconnect();
+    } catch (disconnectError) {
+      console.log('⚠️ ERRO AO DESCONECTAR:', disconnectError);
+    }
+    
     return NextResponse.json({
       success: false,
-      message: 'Erro interno',
-      error: error instanceof Error ? error.message : 'Erro desconhecido'
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    console.log('🔍 VERIFICANDO STATUS DO SUPERADMIN...');
+    
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
+    
+    await mongoose.connect(MONGODB_URI);
+    console.log('✅ CONEXÃO COM BANCO ESTABELECIDA');
+    
+    const db = mongoose.connection.db;
+    if (!db) {
+      throw new Error('Não foi possível conectar ao banco de dados');
+    }
+    
+    const usersCollection = db.collection('users');
+    
+    // Buscar superadmin
+    const superadmin = await usersCollection.findOne({ 
+      email: 'admin@rsystem.com',
+      role: 'superadmin'
+    });
+    
+    await mongoose.disconnect();
+    
+    if (superadmin) {
+      return NextResponse.json({
+        success: true,
+        exists: true,
+        superadmin: {
+          id: superadmin._id.toString(),
+          email: superadmin.email,
+          name: superadmin.name,
+          role: superadmin.role,
+          isActive: superadmin.isActive,
+          hasPassword: !!superadmin.password,
+          passwordLength: superadmin.password ? superadmin.password.length : 0,
+          createdAt: superadmin.createdAt,
+          updatedAt: superadmin.updatedAt
+        },
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      return NextResponse.json({
+        success: true,
+        exists: false,
+        message: 'Superadmin não encontrado',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+  } catch (error) {
+    console.log('❌ ERRO AO VERIFICAR SUPERADMIN:', error);
+    
+    try {
+      await mongoose.disconnect();
+    } catch (disconnectError) {
+      console.log('⚠️ ERRO AO DESCONECTAR:', disconnectError);
+    }
+    
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
     }, { status: 500 });
   }
 }

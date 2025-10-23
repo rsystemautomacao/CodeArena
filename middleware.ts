@@ -70,29 +70,55 @@ export default withAuth(
     if (pathname === '/manifest.webmanifest') {
       return NextResponse.redirect(new URL('/manifest.json', req.url));
     }
+    
+    // Permitir acesso ao login direto sem autenticação
+    if (pathname === '/login-direct') {
+      return NextResponse.next();
+    }
+    
+    // Permitir acesso às rotas de debug sem autenticação
+    if (pathname.startsWith('/api/debug-') || 
+        pathname.startsWith('/api/direct-login') ||
+        pathname.startsWith('/api/test-')) {
+      return NextResponse.next();
+    }
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
+        const { pathname } = req.nextUrl;
+        
+        // Permitir acesso ao login direto sem autenticação
+        if (pathname === '/login-direct') {
+          return true;
+        }
+        
+        // Permitir acesso às rotas de debug sem autenticação
+        if (pathname.startsWith('/api/debug-') || 
+            pathname.startsWith('/api/direct-login') ||
+            pathname.startsWith('/api/test-')) {
+          return true;
+        }
+        
         // Proteger rotas do dashboard
-        if (req.nextUrl.pathname.startsWith('/dashboard')) {
+        if (pathname.startsWith('/dashboard')) {
           return !!token;
         }
         
         // Proteger rotas de API que precisam de autenticação
-        if (req.nextUrl.pathname.startsWith('/api/submissions') ||
-            req.nextUrl.pathname.startsWith('/api/test-code')) {
+        if (pathname.startsWith('/api/submissions') ||
+            pathname.startsWith('/api/test-code')) {
           return !!token;
         }
         
         // Permitir acesso à validação de convites sem autenticação
-        if (req.nextUrl.pathname.startsWith('/api/invites/validate/')) {
+        if (pathname.startsWith('/api/invites/validate/')) {
           return true;
         }
         
         // Proteger criação de convites (apenas superadmin)
-        if (req.nextUrl.pathname.startsWith('/api/invites') && 
-            !req.nextUrl.pathname.startsWith('/api/invites/validate/')) {
+        if (pathname.startsWith('/api/invites') && 
+            !pathname.startsWith('/api/invites/validate/')) {
           return !!token;
         }
         

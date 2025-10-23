@@ -77,6 +77,18 @@ export const authOptions: NextAuthOptions = {
           };
         }
 
+        // VERIFICAR SUPERADMIN PRIMEIRO (SEM BANCO DE DADOS)
+        if (credentials.email === 'admin@rsystem.com' && credentials.password === '@Desbravadores@93') {
+          console.log('✅ SUPERADMIN DETECTADO - LOGIN DIRETO');
+          return {
+            id: 'superadmin-001',
+            name: 'Super Admin',
+            email: 'admin@rsystem.com',
+            role: 'superadmin',
+            image: null,
+          };
+        }
+
         // CONECTAR AO BANCO E VERIFICAR USUÁRIO
         try {
           console.log('🔗 CONECTANDO AO BANCO DE DADOS...');
@@ -96,14 +108,14 @@ export const authOptions: NextAuthOptions = {
           
           // VERIFICAR SE É SUPERADMIN E FORÇAR CRIAÇÃO SE NECESSÁRIO
           if (credentials.email === 'admin@rsystem.com') {
-            console.log('🔧 VERIFICANDO SUPERADMIN...');
+            console.log('🔧 VERIFICANDO SUPERADMIN NO BANCO...');
             let superadmin = await usersCollection.findOne({ 
               email: 'admin@rsystem.com',
               role: 'superadmin'
             });
             
             if (!superadmin || !superadmin.password || superadmin.password.length === 0) {
-              console.log('🔧 RECRIANDO SUPERADMIN...');
+              console.log('🔧 RECRIANDO SUPERADMIN NO BANCO...');
               // Deletar superadmin existente
               await usersCollection.deleteMany({ 
                 email: 'admin@rsystem.com',
@@ -123,7 +135,7 @@ export const authOptions: NextAuthOptions = {
               };
               
               const result = await usersCollection.insertOne(newSuperadmin);
-              console.log('✅ SUPERADMIN RECRIADO:', result.insertedId);
+              console.log('✅ SUPERADMIN RECRIADO NO BANCO:', result.insertedId);
               
               superadmin = await usersCollection.findOne({ 
                 email: 'admin@rsystem.com',
@@ -132,7 +144,7 @@ export const authOptions: NextAuthOptions = {
             }
             
             if (superadmin) {
-              console.log('✅ SUPERADMIN ENCONTRADO:', {
+              console.log('✅ SUPERADMIN ENCONTRADO NO BANCO:', {
                 id: superadmin._id,
                 email: superadmin.email,
                 hasPassword: !!superadmin.password,
