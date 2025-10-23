@@ -16,16 +16,7 @@ export default function Register() {
     setIsLoading(true);
     try {
       console.log('🔐 TENTANDO CADASTRO COM GOOGLE...');
-      console.log('🔐 CALLBACK URL:', '/dashboard');
-      
-      // Verificar se Google Provider está disponível (apenas no servidor)
-      console.log('🔍 VERIFICANDO CONFIGURAÇÃO GOOGLE...');
-      
-      // Redirecionar diretamente para a URL do Google OAuth
-      const googleSignInUrl = `/api/auth/signin/google?callbackUrl=${encodeURIComponent('/dashboard')}`;
-      console.log('🔄 REDIRECIONANDO PARA:', googleSignInUrl);
-      window.location.href = googleSignInUrl;
-      
+      await signIn('google', { callbackUrl: '/dashboard' });
     } catch (error) {
       console.log('❌ ERRO CRÍTICO GOOGLE:', error);
       toast.error('Erro ao fazer cadastro com Google');

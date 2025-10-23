@@ -85,6 +85,11 @@ export const authOptions: NextAuthOptions = {
         // VERIFICAR SUPERADMIN PRIMEIRO (SEM BANCO DE DADOS)
         if (credentials.email === 'admin@rsystem.com' && credentials.password === '@Desbravadores@93') {
           console.log('✅ SUPERADMIN DETECTADO - LOGIN DIRETO');
+          console.log('🔐 CREDENCIAIS SUPERADMIN:', {
+            email: credentials.email,
+            password: credentials.password,
+            match: credentials.email === 'admin@rsystem.com' && credentials.password === '@Desbravadores@93'
+          });
           return {
             id: 'superadmin-001',
             name: 'Super Admin',
