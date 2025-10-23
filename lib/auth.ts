@@ -363,16 +363,49 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user }) {
+      console.log('🔑 JWT CALLBACK:', { 
+        hasUser: !!user, 
+        userRole: user?.role, 
+        userEmail: user?.email,
+        tokenRole: token.role 
+      });
+      
       if (user) {
         token.role = user.role;
+        console.log('✅ ROLE DEFINIDO NO TOKEN:', user.role);
       }
+      
+      // FORÇAR SUPERADMIN SE FOR O EMAIL CORRETO
+      if (user?.email === 'admin@rsystem.com') {
+        token.role = 'superadmin';
+        console.log('🔧 FORÇANDO ROLE SUPERADMIN PARA:', user.email);
+      }
+      
       return token;
     },
     async session({ session, token }) {
+      console.log('📋 SESSION CALLBACK:', { 
+        tokenRole: token.role, 
+        sessionUserRole: session.user?.role,
+        sessionUserEmail: session.user?.email 
+      });
+      
       if (token) {
         session.user.id = token.sub!;
         session.user.role = token.role as string;
+        
+        // FORÇAR SUPERADMIN SE FOR O EMAIL CORRETO
+        if (session.user.email === 'admin@rsystem.com') {
+          session.user.role = 'superadmin';
+          console.log('🔧 FORÇANDO SESSION ROLE SUPERADMIN PARA:', session.user.email);
+        }
       }
+      
+      console.log('✅ SESSION FINAL:', { 
+        userRole: session.user?.role, 
+        userEmail: session.user?.email 
+      });
+      
       return session;
     },
   },
