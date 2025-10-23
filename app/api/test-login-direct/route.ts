@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: false,
           message: 'Erro ao verificar senha',
-          error: error.message
+          error: error instanceof Error ? error.message : 'Erro desconhecido'
         }, { status: 500 });
       }
     } else {
