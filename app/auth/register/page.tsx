@@ -18,26 +18,25 @@ export default function Register() {
       console.log('🔐 TENTANDO CADASTRO COM GOOGLE...');
       console.log('🔐 CALLBACK URL:', '/dashboard');
       
+      // Verificar se Google Provider está disponível
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        console.log('❌ GOOGLE PROVIDER NÃO CONFIGURADO');
+        toast.error('Google OAuth não está configurado. Entre em contato com o administrador.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Usar redirect: true para permitir redirecionamento para Google
       const result = await signIn('google', { 
         callbackUrl: '/dashboard',
-        redirect: false 
+        redirect: true 
       });
       
       console.log('🔐 RESULTADO GOOGLE:', result);
       
-      if (result?.error) {
-        console.log('❌ ERRO GOOGLE:', result.error);
-        toast.error('Erro ao fazer cadastro com Google: ' + result.error);
-        setIsLoading(false);
-      } else if (result?.ok) {
-        console.log('✅ CADASTRO GOOGLE SUCESSO!');
-        toast.success('Cadastro com Google realizado com sucesso!');
-        router.push('/dashboard');
-      } else {
-        console.log('⚠️ RESULTADO INESPERADO:', result);
-        toast.error('Erro inesperado no cadastro com Google');
-        setIsLoading(false);
-      }
+      // Se chegou aqui, o redirecionamento foi iniciado
+      console.log('🔄 REDIRECIONANDO PARA GOOGLE...');
+      
     } catch (error) {
       console.log('❌ ERRO CRÍTICO GOOGLE:', error);
       toast.error('Erro ao fazer cadastro com Google');

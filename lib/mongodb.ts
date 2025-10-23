@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
 
-// Só validar MONGODB_URI se estivermos em produção ou se a variável estiver definida
-if (process.env.NODE_ENV === 'production' && !MONGODB_URI) {
-  throw new Error('Por favor, defina a variável MONGODB_URI no arquivo .env.local');
+// Validar se a string de conexão está correta
+if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
+  throw new Error('MONGODB_URI deve começar com mongodb:// ou mongodb+srv://');
 }
 
 let cached = global.mongoose;
