@@ -15,8 +15,31 @@ export default function Register() {
   const handleGoogleRegister = async () => {
     setIsLoading(true);
     try {
-      await signIn('google', { callbackUrl: '/dashboard' });
+      console.log('🔐 TENTANDO CADASTRO COM GOOGLE...');
+      console.log('🔐 CALLBACK URL:', '/dashboard');
+      
+      const result = await signIn('google', { 
+        callbackUrl: '/dashboard',
+        redirect: false 
+      });
+      
+      console.log('🔐 RESULTADO GOOGLE:', result);
+      
+      if (result?.error) {
+        console.log('❌ ERRO GOOGLE:', result.error);
+        toast.error('Erro ao fazer cadastro com Google: ' + result.error);
+        setIsLoading(false);
+      } else if (result?.ok) {
+        console.log('✅ CADASTRO GOOGLE SUCESSO!');
+        toast.success('Cadastro com Google realizado com sucesso!');
+        router.push('/dashboard');
+      } else {
+        console.log('⚠️ RESULTADO INESPERADO:', result);
+        toast.error('Erro inesperado no cadastro com Google');
+        setIsLoading(false);
+      }
     } catch (error) {
+      console.log('❌ ERRO CRÍTICO GOOGLE:', error);
       toast.error('Erro ao fazer cadastro com Google');
       setIsLoading(false);
     }

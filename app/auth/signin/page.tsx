@@ -39,8 +39,31 @@ export default function SignIn() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      await signIn('google', { callbackUrl: '/dashboard' });
+      console.log('🔐 TENTANDO LOGIN COM GOOGLE...');
+      console.log('🔐 CALLBACK URL:', '/dashboard');
+      
+      const result = await signIn('google', { 
+        callbackUrl: '/dashboard',
+        redirect: false 
+      });
+      
+      console.log('🔐 RESULTADO GOOGLE:', result);
+      
+      if (result?.error) {
+        console.log('❌ ERRO GOOGLE:', result.error);
+        toast.error('Erro ao fazer login com Google: ' + result.error);
+        setIsLoading(false);
+      } else if (result?.ok) {
+        console.log('✅ LOGIN GOOGLE SUCESSO!');
+        toast.success('Login com Google realizado com sucesso!');
+        router.push('/dashboard');
+      } else {
+        console.log('⚠️ RESULTADO INESPERADO:', result);
+        toast.error('Erro inesperado no login com Google');
+        setIsLoading(false);
+      }
     } catch (error) {
+      console.log('❌ ERRO CRÍTICO GOOGLE:', error);
       toast.error('Erro ao fazer login com Google');
       setIsLoading(false);
     }
