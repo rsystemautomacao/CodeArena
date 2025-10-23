@@ -6,10 +6,20 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 TESTE COMPLETO DO SISTEMA DE AUTENTICAÇÃO...');
     
-    const results = {
+    const results: {
+      timestamp: string;
+      environment: string;
+      tests: any[];
+      summary?: {
+        totalTests: number;
+        successfulTests: number;
+        failedTests: number;
+        successRate: number;
+      };
+    } = {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
-      tests: [] as any[]
+      tests: []
     };
     
     // Teste 1: Verificar variáveis de ambiente
