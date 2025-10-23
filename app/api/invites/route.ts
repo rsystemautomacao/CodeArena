@@ -40,25 +40,35 @@ export async function GET(request: NextRequest) {
     }
 
     // Em produção, buscar do banco de dados
-    await connectDB();
-    const invites = await Invite.find({})
-      .sort({ createdAt: -1 })
-      .lean();
+    try {
+      await connectDB();
+      const invites = await Invite.find({})
+        .sort({ createdAt: -1 })
+        .lean();
 
-    const formattedInvites = invites.map((invite: any) => ({
-      id: String(invite._id),
-      email: invite.email,
-      token: invite.token,
-      inviteUrl: `${process.env.NEXTAUTH_URL}/auth/invite/${invite.token}`,
-      createdAt: invite.createdAt.toISOString(),
-      isUsed: invite.isUsed,
-      isActive: !invite.isUsed && new Date(invite.expiresAt).getTime() > new Date().getTime()
-    }));
+      const formattedInvites = invites.map((invite: any) => ({
+        id: String(invite._id),
+        email: invite.email,
+        token: invite.token,
+        inviteUrl: `${process.env.NEXTAUTH_URL}/auth/invite/${invite.token}`,
+        createdAt: invite.createdAt.toISOString(),
+        isUsed: invite.isUsed,
+        isActive: !invite.isUsed && new Date(invite.expiresAt).getTime() > new Date().getTime()
+      }));
 
-    return NextResponse.json({
-      success: true,
-      invites: formattedInvites
-    });
+      return NextResponse.json({
+        success: true,
+        invites: formattedInvites
+      });
+    } catch (dbError) {
+      console.error('Erro ao conectar com banco:', dbError);
+      // Fallback: retornar lista vazia se banco falhar
+      return NextResponse.json({
+        success: true,
+        invites: [],
+        message: 'Banco de dados temporariamente indisponível'
+      });
+    }
 
   } catch (error: any) {
     console.error('Erro ao listar convites:', error);
@@ -114,31 +124,46 @@ export async function POST(request: NextRequest) {
     }
 
     // Em produção, usar banco de dados
-    await connectDB();
-    
-    // Verificar se já existe um convite ativo para este email
-    const existingInvite = await Invite.findOne({
-      email: email.toLowerCase(),
-      isUsed: false,
-      expiresAt: { $gt: new Date() }
-    });
+    try {
+      await connectDB();
+      
+      // Verificar se já existe um convite ativo para este email
+      const existingInvite = await Invite.findOne({
+        email: email.toLowerCase(),
+        isUsed: false,
+        expiresAt: { $gt: new Date() }
+      });
 
-    if (existingInvite) {
-      return NextResponse.json(
-        { success: false, error: 'Já existe um convite ativo para este email' },
-        { status: 400 }
-      );
+      if (existingInvite) {
+        return NextResponse.json(
+          { success: false, error: 'Já existe um convite ativo para este email' },
+          { status: 400 }
+        );
+      }
+
+      const { createInvite } = await import('@/lib/invite');
+      const token = await createInvite(email);
+      const inviteUrl = `${process.env.NEXTAUTH_URL}/auth/invite/${token}`;
+
+      return NextResponse.json({
+        success: true,
+        inviteUrl,
+        token
+      });
+    } catch (dbError) {
+      console.error('Erro ao conectar com banco para criar convite:', dbError);
+      // Fallback: usar sistema de desenvolvimento
+      const { createInvite } = await import('@/lib/invite');
+      const token = await createInvite(email);
+      const inviteUrl = `${process.env.NEXTAUTH_URL}/auth/invite/${token}`;
+      
+      return NextResponse.json({
+        success: true,
+        inviteUrl,
+        token,
+        message: 'Convite criado em modo fallback'
+      });
     }
-
-    const { createInvite } = await import('@/lib/invite');
-    const token = await createInvite(email);
-    const inviteUrl = `${process.env.NEXTAUTH_URL}/auth/invite/${token}`;
-
-    return NextResponse.json({
-      success: true,
-      inviteUrl,
-      token
-    });
 
   } catch (error: any) {
     console.error('Erro ao criar convite:', error);

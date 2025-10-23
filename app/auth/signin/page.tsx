@@ -45,16 +45,10 @@ export default function SignIn() {
       // Verificar se Google Provider está disponível (apenas no servidor)
       console.log('🔍 VERIFICANDO CONFIGURAÇÃO GOOGLE...');
       
-      // Usar redirect: true para permitir redirecionamento para Google
-      const result = await signIn('google', { 
-        callbackUrl: '/dashboard',
-        redirect: true 
-      });
-      
-      console.log('🔐 RESULTADO GOOGLE:', result);
-      
-      // Se chegou aqui, o redirecionamento foi iniciado
-      console.log('🔄 REDIRECIONANDO PARA GOOGLE...');
+      // Redirecionar diretamente para a URL do Google OAuth
+      const googleSignInUrl = `/api/auth/signin/google?callbackUrl=${encodeURIComponent('/dashboard')}`;
+      console.log('🔄 REDIRECIONANDO PARA:', googleSignInUrl);
+      window.location.href = googleSignInUrl;
       
     } catch (error) {
       console.log('❌ ERRO CRÍTICO GOOGLE:', error);
