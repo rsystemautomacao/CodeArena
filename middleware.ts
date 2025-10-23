@@ -98,6 +98,11 @@ export default withAuth(
           return true;
         }
         
+        // Permitir acesso às rotas do NextAuth sem autenticação
+        if (pathname.startsWith('/api/auth/')) {
+          return true;
+        }
+        
         // Permitir acesso ao login direto sem autenticação
         if (pathname === '/login-direct') {
           return true;
