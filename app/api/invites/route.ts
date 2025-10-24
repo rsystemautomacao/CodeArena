@@ -46,14 +46,33 @@ export async function GET(request: NextRequest) {
         .sort({ createdAt: -1 })
         .lean();
 
-      const formattedInvites = invites.map((invite: any) => ({
-        id: String(invite._id),
-        email: invite.email,
-        token: invite.token,
-        inviteUrl: `${process.env.NEXTAUTH_URL}/auth/invite/${invite.token}`,
-        createdAt: invite.createdAt.toISOString(),
-        isUsed: invite.isUsed,
-        isActive: !invite.isUsed && new Date(invite.expiresAt).getTime() > new Date().getTime()
+      // Buscar informações dos usuários para cada convite
+      const mongoose = await import('mongoose');
+      const usersCollection = mongoose.connection.db.collection('users');
+      
+      const formattedInvites = await Promise.all(invites.map(async (invite: any) => {
+        const user = await usersCollection.findOne({ email: invite.email });
+        
+        return {
+          id: String(invite._id),
+          email: invite.email,
+          token: invite.token,
+          inviteUrl: `${process.env.NEXTAUTH_URL}/auth/invite/${invite.token}`,
+          createdAt: invite.createdAt.toISOString(),
+          isUsed: invite.isUsed,
+          isActive: !invite.isUsed && new Date(invite.expiresAt).getTime() > new Date().getTime(),
+          userStatus: user ? {
+            exists: true,
+            role: user.role,
+            isActive: user.isActive,
+            lastLogin: user.lastLogin
+          } : {
+            exists: false,
+            role: null,
+            isActive: false,
+            lastLogin: null
+          }
+        };
       }));
 
       return NextResponse.json({
@@ -139,6 +158,45 @@ export async function POST(request: NextRequest) {
           { success: false, error: 'Já existe um convite ativo para este email' },
           { status: 400 }
         );
+      }
+
+      // Verificar se o usuário já existe no banco
+      const mongoose = await import('mongoose');
+      const usersCollection = mongoose.connection.db.collection('users');
+      const existingUser = await usersCollection.findOne({ 
+        email: email.toLowerCase() 
+      });
+
+      if (existingUser) {
+        if (existingUser.role === 'professor' && existingUser.isActive) {
+          return NextResponse.json(
+            { success: false, error: 'Este professor já está ativo. Use a opção de reset de senha.' },
+            { status: 400 }
+          );
+        } else if (existingUser.role === 'professor' && !existingUser.isActive) {
+          // Usuário existe mas está inativo, reativar
+          await usersCollection.updateOne(
+            { _id: existingUser._id },
+            { $set: { isActive: true, updatedAt: new Date() } }
+          );
+          
+          // Criar novo convite
+          const { createInvite } = await import('@/lib/invite');
+          const token = await createInvite(email);
+          const inviteUrl = `${process.env.NEXTAUTH_URL}/auth/invite/${token}`;
+
+          return NextResponse.json({
+            success: true,
+            inviteUrl,
+            token,
+            message: 'Professor reativado com sucesso'
+          });
+        } else {
+          return NextResponse.json(
+            { success: false, error: 'Este email já está cadastrado como aluno. Use a opção de reset de senha.' },
+            { status: 400 }
+          );
+        }
       }
 
       const { createInvite } = await import('@/lib/invite');

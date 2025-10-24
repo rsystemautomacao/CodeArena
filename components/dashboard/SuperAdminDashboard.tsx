@@ -27,6 +27,12 @@ interface Invite {
   createdAt: string;
   isUsed: boolean;
   isActive: boolean;
+  userStatus?: {
+    exists: boolean;
+    role: string | null;
+    isActive: boolean;
+    lastLogin: string | null;
+  };
 }
 
 export default function SuperAdminDashboard() {
