@@ -181,7 +181,7 @@ export default function ResetPasswordPage() {
               </div>
 
               <div>
-                <label html pond="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
                   Confirmar Nova Senha
                 </label>
                 <div className="relative">
