@@ -300,9 +300,21 @@ export const authOptions: NextAuthOptions = {
         return true;
       }
 
+      // Verificar se é superadmin por email
+      if (user?.email === 'admin@rsystem.com') {
+        user.role = 'superadmin';
+        console.log('✅ SUPERADMIN POR EMAIL - ROLE DEFINIDO: superadmin');
+        return true;
+      }
+
       // Em desenvolvimento, permitir qualquer login
       if (process.env.NODE_ENV === 'development') {
         console.log('✅ DEVELOPMENT MODE - PERMITINDO LOGIN');
+        // Definir papel padrão para desenvolvimento
+        if (!user.role) {
+          user.role = 'aluno';
+          console.log('✅ ROLE PADRÃO DEFINIDO PARA DESENVOLVIMENTO: aluno');
+        }
         return true;
       }
 
@@ -330,11 +342,16 @@ export const authOptions: NextAuthOptions = {
           const existingUser = await usersCollection.findOne({ email: user.email });
           
           if (existingUser) {
-            // Atualizar dados do Google
+            // Atualizar dados do Google e definir o papel do usuário
             await usersCollection.updateOne(
               { _id: existingUser._id },
               { $set: { name: user.name, image: user.image } }
             );
+            
+            // Definir o papel do usuário para o NextAuth
+            user.role = existingUser.role;
+            console.log('✅ USUÁRIO EXISTENTE - ROLE DEFINIDO:', existingUser.role);
+            
             await mongoose.disconnect();
             return true;
           }
@@ -358,6 +375,10 @@ export const authOptions: NextAuthOptions = {
               updatedAt: new Date()
             });
 
+            // Definir o papel do usuário para o NextAuth
+            user.role = 'professor';
+            console.log('✅ NOVO PROFESSOR CRIADO - ROLE DEFINIDO: professor');
+
             // Marcar convite como usado
             await invitesCollection.updateOne(
               { _id: invite._id },
@@ -379,12 +400,22 @@ export const authOptions: NextAuthOptions = {
             updatedAt: new Date()
           });
 
+          // Definir o papel do usuário para o NextAuth
+          user.role = 'aluno';
+          console.log('✅ NOVO ALUNO CRIADO - ROLE DEFINIDO: aluno');
+
           await mongoose.disconnect();
           return true;
         } catch (error) {
           console.error('Erro no Google OAuth:', error);
           return false;
         }
+      }
+
+      // Fallback final - garantir que todos os usuários tenham um papel
+      if (!user.role) {
+        user.role = 'aluno';
+        console.log('✅ ROLE PADRÃO DEFINIDO (FALLBACK): aluno');
       }
 
       return true;
