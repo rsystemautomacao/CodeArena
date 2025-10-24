@@ -28,7 +28,16 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
     const mongoose = await import('mongoose');
-    const usersCollection = mongoose.connection.db.collection('users');
+    const db = mongoose.connection.db;
+    
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: 'Erro de conexão com o banco de dados' },
+        { status: 500 }
+      );
+    }
+    
+    const usersCollection = db.collection('users');
     
     // Verificar se o usuário existe
     const user = await usersCollection.findOne({ 
