@@ -48,7 +48,17 @@ export async function GET(request: NextRequest) {
 
       // Buscar informações dos usuários para cada convite
       const mongoose = await import('mongoose');
-      const usersCollection = mongoose.connection.db.collection('users');
+      const db = mongoose.connection.db;
+      
+      if (!db) {
+        return NextResponse.json({
+          success: true,
+          invites: [],
+          message: 'Erro de conexão com o banco de dados'
+        });
+      }
+      
+      const usersCollection = db.collection('users');
       
       const formattedInvites = await Promise.all(invites.map(async (invite: any) => {
         const user = await usersCollection.findOne({ email: invite.email });
@@ -162,7 +172,16 @@ export async function POST(request: NextRequest) {
 
       // Verificar se o usuário já existe no banco
       const mongoose = await import('mongoose');
-      const usersCollection = mongoose.connection.db.collection('users');
+      const db = mongoose.connection.db;
+      
+      if (!db) {
+        return NextResponse.json(
+          { success: false, error: 'Erro de conexão com o banco de dados' },
+          { status: 500 }
+        );
+      }
+      
+      const usersCollection = db.collection('users');
       const existingUser = await usersCollection.findOne({ 
         email: email.toLowerCase() 
       });
@@ -293,7 +312,16 @@ export async function DELETE(request: NextRequest) {
 
     // Verificar se o usuário existe e excluí-lo também
     const mongoose = await import('mongoose');
-    const usersCollection = mongoose.connection.db.collection('users');
+    const db = mongoose.connection.db;
+    
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: 'Erro de conexão com o banco de dados' },
+        { status: 500 }
+      );
+    }
+    
+    const usersCollection = db.collection('users');
     const user = await usersCollection.findOne({ email: invite.email });
     
     if (user) {
