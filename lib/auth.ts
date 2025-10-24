@@ -12,19 +12,16 @@ console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
 console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? 'CONFIGURADO' : 'FALTANDO');
 
 // Variáveis hardcoded para garantir que funcionem
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'SEU_CLIENT_ID_AQUI';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || 'SEU_CLIENT_SECRET_AQUI';
-
-console.log('🔧 VARIÁVEIS HARDCODED:');
-console.log('GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID);
-console.log('GOOGLE_CLIENT_SECRET:', GOOGLE_CLIENT_SECRET ? 'CONFIGURADO' : 'FALTANDO');
+console.log('🔧 VARIÁVEIS DE AMBIENTE:');
+console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'CONFIGURADO' : 'FALTANDO');
+console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'CONFIGURADO' : 'FALTANDO');
 
 export const authOptions: NextAuthOptions = {
   providers: [
     // Google Provider - sempre incluir, NextAuth vai lidar com as credenciais
     GoogleProvider({
-      clientId: GOOGLE_CLIENT_ID,
-      clientSecret: GOOGLE_CLIENT_SECRET,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
     CredentialsProvider({
       name: 'credentials',
