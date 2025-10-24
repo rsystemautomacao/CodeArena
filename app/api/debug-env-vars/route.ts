@@ -1,102 +1,77 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
-  const debug: any = {
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
+export async function GET(request: NextRequest) {
+  try {
+    console.log('🔍 VERIFICANDO VARIÁVEIS DE AMBIENTE...');
     
-    // Todas as variáveis de ambiente
-    allEnvVars: {
-      NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? 'CONFIGURADO' : 'FALTANDO',
-      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'CONFIGURADO' : 'FALTANDO',
-      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'CONFIGURADO' : 'FALTANDO',
-      SUPERADMIN_EMAIL: process.env.SUPERADMIN_EMAIL,
-      SUPERADMIN_PASSWORD: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADO' : 'FALTANDO',
-      MONGODB_URI: process.env.MONGODB_URI ? 'CONFIGURADO' : 'FALTANDO',
-      JUDGE0_API_URL: process.env.JUDGE0_API_URL,
-      JUDGE0_API_KEY: process.env.JUDGE0_API_KEY ? 'CONFIGURADO' : 'FALTANDO',
-      NODE_ENV: process.env.NODE_ENV,
-      PORT: process.env.PORT
-    },
-    
-    // Verificações específicas do superadmin
-    superadminCheck: {
-      email: {
-        value: process.env.SUPERADMIN_EMAIL,
-        isLoaded: !!process.env.SUPERADMIN_EMAIL,
-        length: process.env.SUPERADMIN_EMAIL?.length || 0,
-        expected: 'admin@rsystem.com'
-      },
-      password: {
-        value: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADA' : 'FALTANDO',
-        isLoaded: !!process.env.SUPERADMIN_PASSWORD,
-        length: process.env.SUPERADMIN_PASSWORD?.length || 0,
-        expected: '@Desbravadores@93'
-      }
-    },
-    
-    // Lista de todas as chaves de ambiente
-    allKeys: Object.keys(process.env).sort(),
-    
-    // Chaves que contêm palavras específicas
-    filteredKeys: {
-      nextauth: Object.keys(process.env).filter(key => key.includes('NEXTAUTH')),
-      google: Object.keys(process.env).filter(key => key.includes('GOOGLE')),
-      superadmin: Object.keys(process.env).filter(key => key.includes('SUPERADMIN')),
-      mongodb: Object.keys(process.env).filter(key => key.includes('MONGODB')),
-      judge0: Object.keys(process.env).filter(key => key.includes('JUDGE'))
-    },
-    
-    // Problemas identificados
-    issues: [] as string[],
-    
-    // Resumo (inicializado vazio)
-    summary: {
-      totalIssues: 0,
-      allCorrect: false,
-      message: ''
+    const debug = {
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      nextauthUrl: process.env.NEXTAUTH_URL,
+      nextauthSecret: process.env.NEXTAUTH_SECRET ? 'CONFIGURADO' : 'FALTANDO',
+      googleClientId: process.env.GOOGLE_CLIENT_ID,
+      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'CONFIGURADO' : 'FALTANDO',
+      mongodbUri: process.env.MONGODB_URI ? 'CONFIGURADO' : 'FALTANDO',
+      issues: [] as string[],
+      recommendations: [] as string[]
+    };
+
+    // Verificar problemas
+    if (!debug.googleClientId) {
+      debug.issues.push('❌ GOOGLE_CLIENT_ID não está definido');
+      debug.recommendations.push('Configure GOOGLE_CLIENT_ID no Vercel');
+    } else if (debug.googleClientId === '$GOOGLE_CLIENT_ID') {
+      debug.issues.push('❌ GOOGLE_CLIENT_ID está como string literal $GOOGLE_CLIENT_ID');
+      debug.recommendations.push('Verificar se a variável está configurada corretamente no Vercel');
+    } else if (!debug.googleClientId.includes('.apps.googleusercontent.com')) {
+      debug.issues.push('❌ GOOGLE_CLIENT_ID formato incorreto');
+      debug.recommendations.push('Verificar se o Client ID está correto');
     }
-  };
 
-  // Identificar problemas
-  if (!process.env.SUPERADMIN_EMAIL) {
-    debug.issues.push('❌ SUPERADMIN_EMAIL não está carregada');
-  } else if (process.env.SUPERADMIN_EMAIL !== 'admin@rsystem.com') {
-    debug.issues.push(`❌ SUPERADMIN_EMAIL incorreta: ${process.env.SUPERADMIN_EMAIL}`);
-  } else {
-    debug.issues.push('✅ SUPERADMIN_EMAIL correta');
+    if (!debug.googleClientSecret) {
+      debug.issues.push('❌ GOOGLE_CLIENT_SECRET não está definido');
+      debug.recommendations.push('Configure GOOGLE_CLIENT_SECRET no Vercel');
+    } else if (debug.googleClientSecret === '$GOOGLE_CLIENT_SECRET') {
+      debug.issues.push('❌ GOOGLE_CLIENT_SECRET está como string literal $GOOGLE_CLIENT_SECRET');
+      debug.recommendations.push('Verificar se a variável está configurada corretamente no Vercel');
+    }
+
+    if (!debug.nextauthUrl) {
+      debug.issues.push('❌ NEXTAUTH_URL não está definido');
+      debug.recommendations.push('Configure NEXTAUTH_URL no Vercel');
+    }
+
+    if (!debug.nextauthSecret) {
+      debug.issues.push('❌ NEXTAUTH_SECRET não está definido');
+      debug.recommendations.push('Configure NEXTAUTH_SECRET no Vercel');
+    }
+
+    // Adicionar informações sobre o problema específico
+    if (debug.googleClientId === '$GOOGLE_CLIENT_ID' || debug.googleClientSecret === '$GOOGLE_CLIENT_SECRET') {
+      debug.recommendations.push('🚨 PROBLEMA IDENTIFICADO: As variáveis estão sendo interpretadas como strings literais');
+      debug.recommendations.push('🔧 SOLUÇÃO: Verificar se as variáveis estão configuradas corretamente no Vercel Dashboard');
+      debug.recommendations.push('📋 PASSO A PASSO:');
+      debug.recommendations.push('1. Acesse o Vercel Dashboard');
+      debug.recommendations.push('2. Vá para Settings > Environment Variables');
+      debug.recommendations.push('3. Verifique se GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET estão configuradas');
+      debug.recommendations.push('4. Se estiverem, delete e recrie as variáveis');
+      debug.recommendations.push('5. Faça um novo deploy');
+    }
+
+    if (debug.issues.length === 0) {
+      debug.issues.push('✅ Todas as variáveis estão configuradas corretamente');
+    }
+
+    console.log('🔍 DEBUG ENV VARS:', JSON.stringify(debug, null, 2));
+    
+    return NextResponse.json(debug);
+    
+  } catch (error) {
+    console.log('❌ ERRO NO DEBUG ENV VARS:', error);
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
-
-  if (!process.env.SUPERADMIN_PASSWORD) {
-    debug.issues.push('❌ SUPERADMIN_PASSWORD não está carregada');
-  } else if (process.env.SUPERADMIN_PASSWORD !== '@Desbravadores@93') {
-    debug.issues.push(`❌ SUPERADMIN_PASSWORD incorreta (tamanho: ${process.env.SUPERADMIN_PASSWORD.length})`);
-  } else {
-    debug.issues.push('✅ SUPERADMIN_PASSWORD correta');
-  }
-
-  if (!process.env.NEXTAUTH_URL) {
-    debug.issues.push('❌ NEXTAUTH_URL não está carregada');
-  } else {
-    debug.issues.push('✅ NEXTAUTH_URL carregada');
-  }
-
-  if (!process.env.NEXTAUTH_SECRET) {
-    debug.issues.push('❌ NEXTAUTH_SECRET não está carregada');
-  } else {
-    debug.issues.push('✅ NEXTAUTH_SECRET carregada');
-  }
-
-  // Resumo
-  const totalIssues = debug.issues.filter((issue: string) => issue.startsWith('❌')).length;
-  debug.summary = {
-    totalIssues,
-    allCorrect: totalIssues === 0,
-    message: totalIssues === 0 ? 'Todas as variáveis estão corretas' : `Encontrados ${totalIssues} problemas`
-  };
-
-  console.log('🔍 DEBUG ENV VARS:', JSON.stringify(debug, null, 2));
-  
-  return NextResponse.json(debug);
 }

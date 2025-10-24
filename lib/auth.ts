@@ -4,14 +4,20 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 
+// Debug das variáveis de ambiente
+console.log('🔍 DEBUG AUTH CONFIG:');
+console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'CONFIGURADO' : 'FALTANDO');
+console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'CONFIGURADO' : 'FALTANDO');
+console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
+console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? 'CONFIGURADO' : 'FALTANDO');
+
 export const authOptions: NextAuthOptions = {
   providers: [
-    // Google Provider - só incluir se as credenciais estiverem configuradas
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? 
-        [GoogleProvider({
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        })] : []),
+    // Google Provider - sempre incluir, NextAuth vai lidar com as credenciais
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: 'credentials',
       credentials: {
