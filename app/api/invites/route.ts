@@ -278,19 +278,33 @@ export async function DELETE(request: NextRequest) {
     // Em produção, usar banco de dados
     await connectDB();
     
-    const result = await Invite.findOneAndDelete({ token });
+    // Buscar o convite primeiro para obter o email
+    const invite = await Invite.findOne({ token });
     
-    if (result) {
-      return NextResponse.json({
-        success: true,
-        message: 'Convite excluído com sucesso'
-      });
-    } else {
+    if (!invite) {
       return NextResponse.json(
         { success: false, error: 'Convite não encontrado' },
         { status: 404 }
       );
     }
+
+    // Excluir o convite
+    await Invite.findOneAndDelete({ token });
+
+    // Verificar se o usuário existe e excluí-lo também
+    const mongoose = await import('mongoose');
+    const usersCollection = mongoose.connection.db.collection('users');
+    const user = await usersCollection.findOne({ email: invite.email });
+    
+    if (user) {
+      await usersCollection.deleteOne({ _id: user._id });
+      console.log(`🎯 [API] Usuário excluído: ${invite.email}`);
+    }
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Convite e usuário excluídos com sucesso'
+    });
 
   } catch (error: any) {
     console.error('Erro ao excluir convite:', error);

@@ -200,6 +200,30 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleResetUserPassword = async (email: string) => {
+    try {
+      const response = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Link de reset de senha enviado com sucesso!');
+        setShowInviteUrl(data.resetUrl);
+      } else {
+        toast.error(data.error || 'Erro ao criar link de reset');
+      }
+    } catch (error) {
+      console.error('Erro ao resetar senha:', error);
+      toast.error('Erro ao resetar senha');
+    }
+  };
+
   const handlePauseAccess = (inviteId: string) => {
     const invite = invites.find(inv => inv.id === inviteId);
     if (!invite) return;
@@ -528,22 +552,20 @@ export default function SuperAdminDashboard() {
                         <RefreshCw className="w-4 h-4" />
                       </button>
                       
-                      <button
-                        onClick={() => handlePauseAccess(invite.id)}
-                        className={`p-2 transition-colors ${
-                          invite.isActive 
-                            ? 'text-gray-600 hover:text-yellow-600' 
-                            : 'text-yellow-600 hover:text-gray-600'
-                        }`}
-                        title={invite.isActive ? 'Pausar acesso' : 'Ativar acesso'}
-                      >
-                        {invite.isActive ? <Pause className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+                      {invite.userStatus?.exists && invite.userStatus?.isActive && (
+                        <button
+                          onClick={() => handleResetUserPassword(invite.email)}
+                          className="p-2 text-gray-600 hover:text-orange-600 transition-colors"
+                          title="Resetar senha do usuário"
+                        >
+                          <Settings className="w-4 h-4" />
+                        </button>
+                      )}
                       
                       <button
                         onClick={() => handleDeleteAccess(invite.id)}
                         className="p-2 text-gray-600 hover:text-red-600 transition-colors"
-                        title="Excluir convite"
+                        title="Excluir convite e usuário"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
