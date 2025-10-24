@@ -248,8 +248,18 @@ export const authOptions: NextAuthOptions = {
             
             if (!invite) {
               console.log('❌ PROFESSOR SEM CONVITE VÁLIDO:', credentials.email);
-              await mongoose.disconnect();
-              return null;
+              console.log('🔍 VERIFICANDO SE É UM PROFESSOR CRIADO DIRETAMENTE...');
+              
+              // Se não tem convite, mas é um professor ativo, permitir login
+              // (pode ser um professor criado diretamente pelo superadmin)
+              if (user.isActive) {
+                console.log('✅ PROFESSOR ATIVO SEM CONVITE - PERMITINDO LOGIN:', credentials.email);
+              } else {
+                await mongoose.disconnect();
+                return null;
+              }
+            } else {
+              console.log('✅ PROFESSOR COM CONVITE VÁLIDO:', credentials.email);
             }
           }
 
