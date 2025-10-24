@@ -1,95 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
     
-    console.log('🔐 TESTE DE LOGIN:', {
-      email,
-      hasPassword: !!password,
-      nodeEnv: process.env.NODE_ENV,
-      superadminEmail: process.env.SUPERADMIN_EMAIL,
-      superadminPassword: process.env.SUPERADMIN_PASSWORD ? 'CONFIGURADO' : 'FALTANDO'
-    });
-
-    // Conectar ao banco
+    console.log('🔍 TESTE LOGIN - EMAIL:', email);
+    console.log('🔍 TESTE LOGIN - PASSWORD:', password ? 'PRESENTE' : 'AUSENTE');
+    console.log('🔍 TESTE LOGIN - NODE_ENV:', process.env.NODE_ENV);
+    
     await connectDB();
-    console.log('✅ CONECTADO AO MONGODB');
-
+    const mongoose = await import('mongoose');
+    const db = mongoose.connection.db;
+    
+    if (!db) {
+      return NextResponse.json({
+        success: false,
+        error: 'Erro de conexão com o banco de dados'
+      });
+    }
+    
+    const usersCollection = db.collection('users');
+    const invitesCollection = db.collection('invites');
+    
     // Buscar usuário
-    const user = await User.findOne({ email });
+    const user = await usersCollection.findOne({
+      email: email.toLowerCase()
+    });
+    
+    console.log('🔍 TESTE LOGIN - USER ENCONTRADO:', user ? 'SIM' : 'NÃO');
     
     if (!user) {
-      console.log('❌ USUÁRIO NÃO ENCONTRADO:', email);
       return NextResponse.json({
         success: false,
-        message: 'Usuário não encontrado',
-        email
-      }, { status: 404 });
+        error: 'Usuário não encontrado',
+        debug: {
+          email: email.toLowerCase(),
+          userFound: false
+        }
+      });
     }
-
-    console.log('👤 USUÁRIO ENCONTRADO:', {
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      hasPassword: !!user.password
-    });
-
+    
+    console.log('🔍 TESTE LOGIN - USER ROLE:', user.role);
+    console.log('🔍 TESTE LOGIN - USER ACTIVE:', user.isActive);
+    
     // Verificar senha
     const passwordMatch = await bcrypt.compare(password, user.password);
+    console.log('🔍 TESTE LOGIN - PASSWORD MATCH:', passwordMatch);
     
-    console.log('🔑 VERIFICAÇÃO DE SENHA:', {
-      passwordMatch,
-      userPasswordLength: user.password?.length || 0
-    });
-
     if (!passwordMatch) {
-      console.log('❌ SENHA INCORRETA');
       return NextResponse.json({
         success: false,
-        message: 'Senha incorreta',
-        email
-      }, { status: 401 });
+        error: 'Senha incorreta',
+        debug: {
+          email: email.toLowerCase(),
+          userFound: true,
+          passwordMatch: false,
+          userRole: user.role,
+          userActive: user.isActive
+        }
+      });
     }
-
-    if (!user.isActive) {
-      console.log('❌ USUÁRIO INATIVO');
-      return NextResponse.json({
-        success: false,
-        message: 'Usuário inativo',
-        email
-      }, { status: 401 });
+    
+    // Verificar se é professor e tem convite válido
+    if (user.role === 'professor') {
+      const invite = await invitesCollection.findOne({
+        email: email.toLowerCase(),
+        isUsed: true
+      });
+      
+      console.log('🔍 TESTE LOGIN - INVITE ENCONTRADO:', invite ? 'SIM' : 'NÃO');
+      
+      if (!invite) {
+        return NextResponse.json({
+          success: false,
+          error: 'Professor sem convite válido',
+          debug: {
+            email: email.toLowerCase(),
+            userFound: true,
+            passwordMatch: true,
+            userRole: user.role,
+            userActive: user.isActive,
+            inviteFound: false
+          }
+        });
+      }
+      
+      console.log('🔍 TESTE LOGIN - INVITE DETAILS:', {
+        email: invite.email,
+        isUsed: invite.isUsed,
+        createdAt: invite.createdAt
+      });
     }
-
-    console.log('✅ LOGIN BEM-SUCEDIDO:', {
-      id: user._id,
-      email: user.email,
-      role: user.role
-    });
-
+    
     return NextResponse.json({
       success: true,
-      message: 'Login bem-sucedido',
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        isActive: user.isActive
+      message: 'Login válido',
+      debug: {
+        email: email.toLowerCase(),
+        userFound: true,
+        passwordMatch: true,
+        userRole: user.role,
+        userActive: user.isActive,
+        inviteFound: user.role === 'professor' ? true : 'N/A'
       }
     });
-
-  } catch (error: any) {
-    console.error('❌ ERRO NO TESTE DE LOGIN:', error);
     
+  } catch (error) {
+    console.error('❌ ERRO NO TESTE LOGIN:', error);
     return NextResponse.json({
       success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    }, { status: 500 });
+      error: 'Erro interno do servidor',
+      debug: {
+        error: error instanceof Error ? error.message : String(error)
+      }
+    });
   }
 }
