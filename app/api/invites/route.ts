@@ -188,10 +188,21 @@ export async function POST(request: NextRequest) {
 
       if (existingUser) {
         if (existingUser.role === 'professor' && existingUser.isActive) {
-          return NextResponse.json(
-            { success: false, error: 'Este professor já está ativo. Use a opção de reset de senha.' },
-            { status: 400 }
-          );
+          // Professor já existe e está ativo - criar novo convite mesmo assim
+          // (pode ser um reenvio de convite ou professor que precisa de novo link)
+          console.log('🔍 Professor ativo encontrado - criando novo convite:', email);
+          
+          // Criar novo convite mesmo para professor existente
+          const { createInvite } = await import('@/lib/invite');
+          const token = await createInvite(email);
+          const inviteUrl = `${process.env.NEXTAUTH_URL}/auth/invite/${token}`;
+
+          return NextResponse.json({
+            success: true,
+            inviteUrl,
+            token,
+            message: 'Novo convite criado para professor existente'
+          });
         } else if (existingUser.role === 'professor' && !existingUser.isActive) {
           // Usuário existe mas está inativo, reativar
           await usersCollection.updateOne(
