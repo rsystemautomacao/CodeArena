@@ -79,13 +79,40 @@ export async function POST(request: NextRequest) {
 
     // Verificar se já existe um usuário com este email
     const existingUser = await User.findOne({ email: email.toLowerCase() });
+    
     if (existingUser) {
-      return NextResponse.json(
-        { success: false, error: 'Já existe uma conta com este email' },
-        { status: 400 }
+      // Se o usuário já existe, atualizar a senha e reativar
+      console.log('🔍 Usuário existente encontrado - atualizando senha');
+      
+      // Criptografar nova senha
+      const hashedPassword = await bcrypt.hash(password, 12);
+      
+      // Atualizar usuário existente
+      await User.findOneAndUpdate(
+        { email: email.toLowerCase() },
+        {
+          password: hashedPassword,
+          isActive: true,
+          updatedAt: new Date()
+        }
       );
+      
+      // Marcar convite como usado
+      await markInviteAsUsed(inviteToken);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Senha do professor atualizada com sucesso',
+        user: {
+          id: existingUser._id,
+          email: existingUser.email,
+          role: existingUser.role,
+          isActive: true
+        }
+      });
     }
 
+    // Se não existe, criar novo usuário
     // Criptografar senha
     const hashedPassword = await bcrypt.hash(password, 12);
 
