@@ -83,19 +83,36 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       // Se o usuário já existe, atualizar a senha e reativar
       console.log('🔍 Usuário existente encontrado - atualizando senha');
+      console.log('🔍 ID do usuário:', existingUser._id);
+      console.log('🔍 Email:', existingUser.email);
+      console.log('🔍 Role:', existingUser.role);
+      console.log('🔍 Senha atual (hash):', existingUser.password ? existingUser.password.substring(0, 20) + '...' : 'AUSENTE');
       
       // Criptografar nova senha
       const hashedPassword = await bcrypt.hash(password, 12);
+      console.log('🔍 Nova senha (hash):', hashedPassword.substring(0, 20) + '...');
       
       // Atualizar usuário existente
-      await User.findOneAndUpdate(
+      const updatedUser = await User.findOneAndUpdate(
         { email: email.toLowerCase() },
         {
           password: hashedPassword,
           isActive: true,
           updatedAt: new Date()
-        }
+        },
+        { new: true }
       );
+      
+      console.log('✅ Usuário atualizado:', updatedUser ? 'SIM' : 'NÃO');
+      console.log('🔍 Senha após update (hash):', updatedUser.password ? updatedUser.password.substring(0, 20) + '...' : 'AUSENTE');
+      
+      // Verificar se a senha foi realmente atualizada
+      const verifyUser = await User.findOne({ email: email.toLowerCase() });
+      console.log('🔍 Verificação - Senha no banco (hash):', verifyUser.password ? verifyUser.password.substring(0, 20) + '...' : 'AUSENTE');
+      
+      // Testar se a nova senha funciona
+      const passwordMatch = await bcrypt.compare(password, verifyUser.password);
+      console.log('🔍 Senha funciona?', passwordMatch ? 'SIM' : 'NÃO');
       
       // Marcar convite como usado
       await markInviteAsUsed(inviteToken);
