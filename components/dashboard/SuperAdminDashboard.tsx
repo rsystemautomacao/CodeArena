@@ -176,6 +176,14 @@ export default function SuperAdminDashboard() {
     const invite = invites.find(inv => inv.id === inviteId);
     if (!invite) return;
 
+    // Verificar se o usuário já existe e está ativo
+    if (invite.userStatus?.exists && invite.userStatus?.isActive) {
+      // Se o usuário existe, usar reset de senha em vez de criar novo convite
+      await handleResetUserPassword(invite.email);
+      return;
+    }
+
+    // Se o usuário não existe, criar novo convite
     try {
       const response = await fetch('/api/invites', {
         method: 'POST',
