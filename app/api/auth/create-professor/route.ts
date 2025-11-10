@@ -159,7 +159,11 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Erro ao criar conta de professor:', error);
     return NextResponse.json(
-      { success: false, error: 'Erro interno do servidor' },
+      {
+        success: false,
+        error: 'Erro interno do servidor',
+        debug: error?.message || error?.toString() || 'Sem detalhes'
+      },
       { status: 500 }
     );
   }
