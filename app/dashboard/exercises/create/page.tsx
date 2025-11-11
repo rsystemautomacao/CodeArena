@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useMemo, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -113,13 +114,13 @@ export default function CreateExercisePage() {
     setTags((prev) => prev.filter((tag) => tag !== value));
   };
 
-  const updateTestCase = (
-    list: TestCase[],
-    setter: (value: TestCase[]) => void,
-    index: number,
-    field: keyof TestCase,
-    value: string | boolean
-  ) => {
+const updateTestCase = (
+  list: TestCase[],
+  setter: Dispatch<SetStateAction<TestCase[]>>,
+  index: number,
+  field: keyof TestCase,
+  value: string | boolean
+) => {
     setter(
       list.map((item, idx) =>
         idx === index
@@ -132,11 +133,15 @@ export default function CreateExercisePage() {
     );
   };
 
-  const addNewTestCase = (setter: (value: TestCase[]) => void) => {
-    setter((prev) => [...prev, createEmptyTestCase()]);
-  };
+const addNewTestCase = (setter: Dispatch<SetStateAction<TestCase[]>>) => {
+  setter((prev) => [...prev, createEmptyTestCase()]);
+};
 
-  const removeTestCase = (list: TestCase[], setter: (value: TestCase[]) => void, index: number) => {
+const removeTestCase = (
+  list: TestCase[],
+  setter: Dispatch<SetStateAction<TestCase[]>>,
+  index: number
+) => {
     if (list.length === 1) {
       setter([createEmptyTestCase()]);
       return;
