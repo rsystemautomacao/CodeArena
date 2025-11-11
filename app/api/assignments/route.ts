@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uniqueExerciseIds = [...new Set(exerciseIds)];
+    const uniqueExerciseIds = Array.from(new Set(exerciseIds));
     const exercises = await Exercise.find({
       _id: { $in: uniqueExerciseIds },
       createdBy: session.user.id,

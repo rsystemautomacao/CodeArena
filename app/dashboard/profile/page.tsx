@@ -16,6 +16,7 @@ import {
   Upload
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface UserProfile {
   _id: string;
@@ -262,21 +263,27 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center mb-6">
                 <div className="relative">
                   {avatarPreview ? (
-                    <img
+                    <Image
                       src={avatarPreview}
                       alt="Avatar"
-                      className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
-                      onError={(e) => {
+                      width={96}
+                      height={96}
+                      unoptimized
+                      className="h-24 w-24 rounded-full border-4 border-gray-200 object-cover"
+                      onError={() => {
                         console.log('❌ ERRO AO CARREGAR IMAGEM:', avatarPreview);
                         setAvatarPreview(null);
                       }}
                     />
                   ) : profile?.avatar ? (
-                    <img
+                    <Image
                       src={profile.avatar}
                       alt="Avatar"
-                      className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
-                      onError={(e) => {
+                      width={96}
+                      height={96}
+                      unoptimized
+                      className="h-24 w-24 rounded-full border-4 border-gray-200 object-cover"
+                      onError={() => {
                         console.log('❌ ERRO AO CARREGAR IMAGEM DO PERFIL:', profile.avatar);
                       }}
                     />
