@@ -40,17 +40,42 @@ export default function TeacherDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const totalStudents = classrooms.reduce(
+    (total, classroom) => total + (classroom.students?.length || 0),
+    0
+  );
+  const recentClassrooms = classrooms.slice(0, 3);
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
-      // Aqui você faria as chamadas para a API para buscar turmas e atividades
-      // Por enquanto, vamos usar dados mockados
-      setClassrooms([]);
-      setAssignments([]);
+      setIsLoading(true);
+
+      const [classroomRes, assignmentRes] = await Promise.all([
+        fetch('/api/classrooms', { cache: 'no-store' }),
+        fetch('/api/assignments', { cache: 'no-store' }),
+      ]);
+
+      if (classroomRes.ok) {
+        const classroomData = await classroomRes.json();
+        setClassrooms(classroomData.classrooms || []);
+      } else {
+        const payload = await classroomRes.json().catch(() => null);
+        toast.error(payload?.error || 'Erro ao carregar turmas');
+      }
+
+      if (assignmentRes.ok) {
+        const assignmentData = await assignmentRes.json();
+        setAssignments(assignmentData.assignments || []);
+      } else {
+        const payload = await assignmentRes.json().catch(() => null);
+        toast.error(payload?.error || 'Erro ao carregar atividades');
+      }
     } catch (error) {
+      console.error(error);
       toast.error('Erro ao carregar dados');
     } finally {
       setIsLoading(false);
@@ -210,7 +235,7 @@ export default function TeacherDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total de Alunos</p>
-                <p className="text-2xl font-bold text-gray-900">-</p>
+                <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
               </div>
             </div>
           </div>
@@ -232,7 +257,7 @@ export default function TeacherDashboard() {
               </Link>
             </div>
             
-            {classrooms.length === 0 ? (
+            {recentClassrooms.length === 0 ? (
               <div className="text-center py-8">
                 <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 mb-4">Nenhuma turma criada ainda</p>
@@ -245,17 +270,27 @@ export default function TeacherDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {classrooms.slice(0, 3).map((classroom) => (
-                  <div key={classroom._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                {recentClassrooms.map((classroom) => (
+                  <div
+                    key={classroom._id}
+                    className="flex items-center justify-between rounded-lg border border-gray-200 p-3"
+                  >
                     <div>
                       <h3 className="font-medium text-gray-900">{classroom.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        {classroom.students.length} alunos
+                      <p className="text-xs text-gray-500">
+                        Código: <span className="font-mono">{classroom.inviteCode}</span>
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">Código</p>
-                      <p className="font-mono text-sm font-medium">{classroom.inviteCode}</p>
+                    <div className="flex items-center space-x-3">
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                        {(classroom.students?.length || 0)} alunos
+                      </span>
+                      <Link
+                        href={`/dashboard/classrooms/${classroom._id}/edit`}
+                        className="text-xs font-semibold text-primary-600 hover:underline"
+                      >
+                        Gerenciar
+                      </Link>
                     </div>
                   </div>
                 ))}
