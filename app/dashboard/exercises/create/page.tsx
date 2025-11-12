@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState, useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -14,7 +14,13 @@ import {
   Tag,
   HelpCircle,
   CheckCircle2,
+  Play,
+  X,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react';
+import Editor from '@monaco-editor/react';
 
 type TestCase = {
   input: string;
@@ -58,6 +64,21 @@ int main() {
     // escreva sua solução aqui
     return 0;
 }`,
+  java: `import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        // escreva sua solução aqui
+        scanner.close();
+    }
+}`,
+  c: `#include <stdio.h>
+
+int main() {
+    // escreva sua solução aqui
+    return 0;
+}`,
 };
 
 export default function CreateExercisePage() {
@@ -74,10 +95,25 @@ export default function CreateExercisePage() {
   const [testCases, setTestCases] = useState<TestCase[]>([
     { ...createEmptyTestCase(), isHidden: true },
   ]);
-  const [languagePreview, setLanguagePreview] = useState<'javascript' | 'python' | 'cpp'>(
+  const [languagePreview, setLanguagePreview] = useState<'javascript' | 'python' | 'cpp' | 'java' | 'c'>(
     'javascript'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Estados para teste em tempo real
+  const [testCode, setTestCode] = useState(languageExamples.python);
+  const [testLanguage, setTestLanguage] = useState<'javascript' | 'python' | 'cpp' | 'java' | 'c'>('python');
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResults, setTestResults] = useState<Array<{
+    testCase: number;
+    status: string;
+    message: string;
+    time?: number;
+    memory?: number;
+    output?: string;
+    expectedOutput?: string;
+  }>>([]);
+  const [allTestsPassed, setAllTestsPassed] = useState(false);
 
   const filteredExamples = useMemo(
     () =>
@@ -94,6 +130,13 @@ export default function CreateExercisePage() {
       ),
     [testCases]
   );
+
+  // Limpar resultados de teste quando os casos de teste mudarem
+  useEffect(() => {
+    setTestResults([]);
+    setAllTestsPassed(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(testCases.map(tc => ({ input: tc.input, expectedOutput: tc.expectedOutput })))]);
 
   const handleAddTag = () => {
     const sanitized = tagInput.trim();
@@ -161,6 +204,71 @@ const removeTestCase = (
     setExamples([createEmptyTestCase()]);
     setTestCases([{ ...createEmptyTestCase(), isHidden: true }]);
     setLanguagePreview('javascript');
+    setTestCode('');
+    setTestLanguage('python');
+    setTestResults([]);
+    setAllTestsPassed(false);
+  };
+
+  const handleTestExercise = async () => {
+    if (!testCode.trim()) {
+      toast.error('Por favor, escreva algum código antes de testar');
+      return;
+    }
+
+    if (filteredTestCases.length === 0) {
+      toast.error('Cadastre pelo menos um caso de teste antes de testar');
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResults([]);
+    setAllTestsPassed(false);
+
+    try {
+      const response = await fetch('/api/test-exercise', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: testCode,
+          language: testLanguage,
+          testCases: filteredTestCases.map(tc => ({
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+          })),
+          timeLimit,
+          memoryLimit,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Erro ao testar código');
+      }
+
+      if (data.success) {
+        setTestResults(data.results || []);
+        setAllTestsPassed(data.allPassed || false);
+        
+        if (data.allPassed) {
+          toast.success('Todos os testes passaram! Você pode publicar o exercício.');
+        } else {
+          toast.error('Alguns testes falharam. Revise seu código antes de publicar.');
+        }
+      } else {
+        throw new Error(data?.error || 'Erro ao testar código');
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || 'Erro ao testar código');
+      setTestResults([]);
+      setAllTestsPassed(false);
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -173,6 +281,19 @@ const removeTestCase = (
 
     if (filteredTestCases.length === 0) {
       toast.error('Cadastre pelo menos um caso de teste');
+      return;
+    }
+
+    // Aviso se não testou, mas permite publicar
+    if (testResults.length === 0) {
+      const confirmed = window.confirm(
+        'Você ainda não testou o código. Deseja publicar mesmo assim? É recomendado testar antes de publicar.'
+      );
+      if (!confirmed) {
+        return;
+      }
+    } else if (!allTestsPassed) {
+      toast.error('Você precisa passar em todos os testes antes de publicar o exercício');
       return;
     }
 
@@ -568,8 +689,8 @@ Sugestão: utilize Markdown básico para separar seções, listas e destacar tre
             </p>
 
             <div className="mt-4">
-              <div className="flex space-x-2">
-                {(['javascript', 'python', 'cpp'] as const).map((language) => (
+              <div className="flex flex-wrap gap-2">
+                {(['javascript', 'python', 'cpp', 'java', 'c'] as const).map((language) => (
                   <button
                     key={language}
                     type="button"
@@ -580,7 +701,11 @@ Sugestão: utilize Markdown básico para separar seções, listas e destacar tre
                         : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
                     }`}
                   >
-                    {language === 'javascript' ? 'Node.js' : language === 'python' ? 'Python' : 'C++'}
+                    {language === 'javascript' ? 'Node.js' 
+                      : language === 'python' ? 'Python' 
+                      : language === 'cpp' ? 'C++'
+                      : language === 'java' ? 'Java'
+                      : 'C'}
                   </button>
                 ))}
               </div>
@@ -588,6 +713,148 @@ Sugestão: utilize Markdown básico para separar seções, listas e destacar tre
                 {languageExamples[languagePreview]}
               </pre>
             </div>
+          </div>
+
+          {/* Seção de Teste em Tempo Real */}
+          <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Teste em Tempo Real</h3>
+                <p className="text-sm text-gray-500">
+                  Teste seu código contra todos os casos de teste antes de publicar
+                </p>
+              </div>
+              {allTestsPassed && (
+                <div className="flex items-center space-x-1 text-green-600">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="text-sm font-medium">Todos os testes passaram</span>
+                </div>
+              )}
+            </div>
+
+            {/* Seletor de Linguagem */}
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Linguagem:</label>
+              <select
+                value={testLanguage}
+                onChange={(e) => {
+                  setTestLanguage(e.target.value as any);
+                  setTestCode(languageExamples[e.target.value] || '');
+                }}
+                className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 transition focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              >
+                <option value="python">Python</option>
+                <option value="java">Java</option>
+                <option value="c">C</option>
+                <option value="cpp">C++</option>
+                <option value="javascript">JavaScript (Node.js)</option>
+              </select>
+            </div>
+
+            {/* Editor de Código */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="h-64">
+                <Editor
+                  height="100%"
+                  language={testLanguage === 'javascript' ? 'javascript' : testLanguage === 'cpp' ? 'cpp' : testLanguage === 'java' ? 'java' : testLanguage === 'c' ? 'c' : 'python'}
+                  value={testCode}
+                  onChange={(value) => setTestCode(value || '')}
+                  theme="vs-light"
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    roundedSelection: false,
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 2,
+                    insertSpaces: true,
+                    wordWrap: 'on',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Botão de Teste */}
+            <button
+              type="button"
+              onClick={handleTestExercise}
+              disabled={isTesting || filteredTestCases.length === 0}
+              className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+            >
+              {isTesting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Testando...
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-4 w-4" />
+                  Testar contra todos os casos de teste
+                </>
+              )}
+            </button>
+
+            {/* Resultados dos Testes */}
+            {testResults.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-gray-900">Resultados dos Testes:</h4>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {testResults.map((result, index) => (
+                    <div
+                      key={index}
+                      className={`rounded-lg border p-3 ${
+                        result.status === 'accepted'
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-red-200 bg-red-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          {result.status === 'accepted' ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
+                          <span className="text-sm font-medium text-gray-900">
+                            Caso de Teste #{result.testCase}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            result.status === 'accepted'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {result.status === 'accepted' ? 'Aceito' : result.message}
+                        </span>
+                      </div>
+                      {result.status !== 'accepted' && (
+                        <div className="mt-2 space-y-1 text-xs">
+                          <div>
+                            <span className="font-medium text-gray-700">Esperado: </span>
+                            <span className="font-mono text-gray-900">{result.expectedOutput}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Obtido: </span>
+                            <span className="font-mono text-gray-900">
+                              {result.output || 'Nenhuma saída'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {result.time !== undefined && (
+                        <div className="mt-1 text-xs text-gray-600">
+                          Tempo: {result.time.toFixed(3)}s
+                          {result.memory !== undefined && ` • Memória: ${result.memory} KB`}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50 p-5 text-sm text-gray-700">
@@ -599,13 +866,13 @@ Sugestão: utilize Markdown básico para separar seções, listas e destacar tre
               <li>• O enunciado descreve claramente a entrada e a saída?</li>
               <li>• Há pelo menos um caso de teste público e outro oculto?</li>
               <li>• Os limites de tempo/memória são coerentes com a dificuldade?</li>
-              <li>• Você testou os casos manualmente antes de salvar?</li>
+              <li>• Você testou o código e todos os testes passaram?</li>
             </ul>
           </div>
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (!allTestsPassed && testResults.length > 0)}
             className="flex w-full items-center justify-center rounded-lg bg-primary-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-primary-400"
           >
             {isSubmitting ? (
@@ -613,8 +880,18 @@ Sugestão: utilize Markdown básico para separar seções, listas e destacar tre
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Salvando exercício...
               </>
+            ) : !allTestsPassed && testResults.length > 0 ? (
+              <>
+                <XCircle className="mr-2 h-4 w-4" />
+                Corrija os testes antes de publicar
+              </>
+            ) : testResults.length === 0 ? (
+              <>
+                <AlertCircle className="mr-2 h-4 w-4" />
+                Publicar sem testar (não recomendado)
+              </>
             ) : (
-              'Salvar exercício'
+              'Publicar exercício'
             )}
           </button>
 
