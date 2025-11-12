@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Erro ao criar turma:', error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro interno do servidor', debug: error?.message || error?.toString() },
       { status: 500 }
     );
   }
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Erro ao buscar turmas:', error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro interno do servidor', debug: error?.message || error?.toString() },
       { status: 500 }
     );
   }
