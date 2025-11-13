@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
       phone: user.phone || '',
       bio: user.bio || '',
       location: user.location || '',
+      address: user.address || '',
+      subjects: user.subjects || [],
       avatar: user.avatar || user.image || '',
       image: user.image || user.avatar || '',
       role: user.role,
@@ -61,7 +63,20 @@ export async function PUT(request: NextRequest) {
     const phone = formData.get('phone') as string;
     const bio = formData.get('bio') as string;
     const location = formData.get('location') as string;
+    const address = formData.get('address') as string;
+    const subjectsStr = formData.get('subjects') as string;
     const avatarFile = formData.get('avatar') as File;
+    
+    // Processar matérias (array de strings)
+    let subjects: string[] = [];
+    if (subjectsStr) {
+      try {
+        subjects = JSON.parse(subjectsStr);
+      } catch {
+        // Se não for JSON válido, tratar como string separada por vírgulas
+        subjects = subjectsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      }
+    }
 
     console.log('🔍 DADOS RECEBIDOS:', {
       name,
@@ -80,11 +95,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
-    // Atualizar os campos diretamente no objeto - EXATAMENTE como o name
+    // Atualizar os campos diretamente no objeto
     existingUser.name = name;
     existingUser.phone = phone;
     existingUser.bio = bio;
     existingUser.location = location;
+    existingUser.address = address;
+    existingUser.subjects = subjects;
 
     // Se uma nova foto foi enviada
     if (avatarFile && avatarFile.size > 0) {
@@ -147,6 +164,8 @@ export async function PUT(request: NextRequest) {
       phone: savedUser.phone || '',
       bio: savedUser.bio || '',
       location: savedUser.location || '',
+      address: savedUser.address || '',
+      subjects: savedUser.subjects || [],
       avatar: savedUser.avatar || savedUser.image || '',
       image: savedUser.image || savedUser.avatar || '',
       role: savedUser.role,

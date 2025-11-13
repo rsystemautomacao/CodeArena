@@ -1,19 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { 
   BookOpen, 
   Users, 
   Plus, 
-  LogOut, 
   BarChart3,
   Clock,
-  CheckCircle,
-  AlertCircle
+  Menu,
 } from 'lucide-react';
 import Link from 'next/link';
+import Sidebar from '@/components/dashboard/Sidebar';
 
 interface Classroom {
   _id: string;
@@ -40,6 +39,7 @@ export default function TeacherDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [exercisesCount, setExercisesCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const totalStudents = classrooms.reduce(
     (total, classroom) => total + (classroom.students?.length || 0),
@@ -89,9 +89,6 @@ export default function TeacherDashboard() {
     }
   };
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/' });
-  };
 
   if (isLoading) {
     return (
@@ -105,34 +102,39 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-primary-500">CodeArena</h1>
-              <span className="ml-4 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-                Professor
-              </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                Olá, <span className="font-medium">{session?.user?.name}</span>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        userName={session?.user?.name}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col lg:ml-0">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="lg:hidden text-gray-600 hover:text-gray-900"
+                >
+                  <Menu className="h-6 w-6" />
+                </button>
+                <div className="flex items-center">
+                  <h1 className="text-2xl font-bold text-primary-500">CodeArena</h1>
+                  <span className="ml-4 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                    Professor
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <LogOut className="w-4 h-4 mr-1" />
-                Sair
-              </button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -366,6 +368,7 @@ export default function TeacherDashboard() {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>

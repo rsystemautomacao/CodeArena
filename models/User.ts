@@ -8,6 +8,13 @@ export interface IUser extends Document {
   image?: string;
   role: 'superadmin' | 'professor' | 'aluno';
   isActive: boolean;
+  // Campos adicionais para professor
+  phone?: string;
+  bio?: string;
+  location?: string;
+  address?: string;
+  subjects?: string[]; // Matérias/disciplinas
+  avatar?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +37,29 @@ const UserSchema = new Schema<IUser>({
   },
   image: {
     type: String,
+  },
+  avatar: {
+    type: String,
+  },
+  phone: {
+    type: String,
+    trim: true,
+  },
+  bio: {
+    type: String,
+    trim: true,
+  },
+  location: {
+    type: String,
+    trim: true,
+  },
+  address: {
+    type: String,
+    trim: true,
+  },
+  subjects: {
+    type: [String],
+    default: [],
   },
   role: {
     type: String,
