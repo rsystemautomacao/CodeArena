@@ -244,7 +244,10 @@ export default function TeacherDashboard() {
             </div>
           </Link>
           
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <Link
+            href="/dashboard/students"
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <BarChart3 className="w-6 h-6 text-blue-500" />
@@ -254,7 +257,7 @@ export default function TeacherDashboard() {
                 <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
               </div>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Recent Activity */}
