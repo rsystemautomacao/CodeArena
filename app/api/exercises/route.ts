@@ -92,6 +92,11 @@ export async function GET(request: NextRequest) {
 
     const query: any = { isActive: true };
     
+    // Se for professor, mostrar apenas seus exercícios
+    if (session.user.role === 'professor') {
+      query.createdBy = session.user.id;
+    }
+    
     if (difficulty) {
       query.difficulty = difficulty;
     }
@@ -100,12 +105,16 @@ export async function GET(request: NextRequest) {
       query.tags = { $in: [tag] };
     }
 
+    const selectFields = session.user.role === 'professor' 
+      ? '' // Professores veem todos os campos incluindo testCases
+      : '-testCases'; // Alunos não veem casos de teste
+
     const exercises = await Exercise.find(query)
       .populate('createdBy', 'name')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .select('-testCases'); // Não retornar casos de teste para alunos
+      .select(selectFields);
 
     const total = await Exercise.countDocuments(query);
 

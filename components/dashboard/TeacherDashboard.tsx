@@ -38,6 +38,7 @@ export default function TeacherDashboard() {
   const { data: session } = useSession();
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [exercisesCount, setExercisesCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const totalStudents = classrooms.reduce(
@@ -54,9 +55,10 @@ export default function TeacherDashboard() {
     try {
       setIsLoading(true);
 
-      const [classroomRes, assignmentRes] = await Promise.all([
+      const [classroomRes, assignmentRes, exercisesRes] = await Promise.all([
         fetch('/api/classrooms', { cache: 'no-store' }),
         fetch('/api/assignments', { cache: 'no-store' }),
+        fetch('/api/exercises?limit=1', { cache: 'no-store' }),
       ]);
 
       if (classroomRes.ok) {
@@ -73,6 +75,11 @@ export default function TeacherDashboard() {
       } else {
         const payload = await assignmentRes.json().catch(() => null);
         toast.error(payload?.error || 'Erro ao carregar atividades');
+      }
+
+      if (exercisesRes.ok) {
+        const exercisesData = await exercisesRes.json();
+        setExercisesCount(exercisesData.pagination?.total || 0);
       }
     } catch (error) {
       console.error(error);
@@ -192,7 +199,10 @@ export default function TeacherDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <Link
+            href="/dashboard/classrooms"
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="p-2 bg-primary-100 rounded-lg">
                 <Users className="w-6 h-6 text-primary-500" />
@@ -202,21 +212,27 @@ export default function TeacherDashboard() {
                 <p className="text-2xl font-bold text-gray-900">{classrooms.length}</p>
               </div>
             </div>
-          </div>
+          </Link>
           
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <Link
+            href="/dashboard/exercises"
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="p-2 bg-success-100 rounded-lg">
                 <BookOpen className="w-6 h-6 text-success-500" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Exercícios</p>
-                <p className="text-2xl font-bold text-gray-900">-</p>
+                <p className="text-2xl font-bold text-gray-900">{exercisesCount}</p>
               </div>
             </div>
-          </div>
+          </Link>
           
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <Link
+            href="/dashboard/assignments"
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="p-2 bg-yellow-100 rounded-lg">
                 <Clock className="w-6 h-6 text-yellow-500" />
@@ -226,7 +242,7 @@ export default function TeacherDashboard() {
                 <p className="text-2xl font-bold text-gray-900">{assignments.length}</p>
               </div>
             </div>
-          </div>
+          </Link>
           
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex items-center">
