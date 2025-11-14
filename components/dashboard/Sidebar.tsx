@@ -64,10 +64,10 @@ export default function Sidebar({ isOpen, onClose, userName }: SidebarProps) {
 
   return (
     <>
-      {/* Overlay para mobile */}
+      {/* Overlay para mobile e desktop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={onClose}
         />
       )}
@@ -76,7 +76,7 @@ export default function Sidebar({ isOpen, onClose, userName }: SidebarProps) {
       <aside
         className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:z-auto`}
+        }`}
       >
         <div className="flex flex-col h-full">
           {/* Header do Sidebar */}
@@ -84,7 +84,7 @@ export default function Sidebar({ isOpen, onClose, userName }: SidebarProps) {
             <h2 className="text-xl font-bold text-primary-500">CodeArena</h2>
             <button
               onClick={onClose}
-              className="lg:hidden text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-gray-700"
             >
               <X className="h-6 w-6" />
             </button>
@@ -110,10 +110,8 @@ export default function Sidebar({ isOpen, onClose, userName }: SidebarProps) {
                     <Link
                       href={item.href}
                       onClick={() => {
-                        // Fechar menu no mobile ao clicar
-                        if (window.innerWidth < 1024) {
-                          onClose();
-                        }
+                        // Fechar menu ao clicar em qualquer item
+                        onClose();
                       }}
                       className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                         isActive
