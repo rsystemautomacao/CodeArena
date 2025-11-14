@@ -430,37 +430,64 @@ export const authOptions: NextAuthOptions = {
 
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       console.log('🔑 JWT CALLBACK:', { 
         hasUser: !!user, 
         userRole: user?.role, 
         userEmail: user?.email,
-        tokenRole: token.role 
+        tokenRole: token.role,
+        trigger,
+        sessionName: session?.user?.name
       });
       
+      // Quando o usuário faz login
       if (user) {
         token.role = user.role;
-        console.log('✅ ROLE DEFINIDO NO TOKEN:', user.role);
+        token.name = user.name;
+        token.picture = user.image;
+        console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', { role: user.role, name: user.name });
+      }
+      
+      // Quando update() é chamado (trigger === 'update')
+      if (trigger === 'update' && session) {
+        if (session.user?.name) {
+          token.name = session.user.name;
+          console.log('✅ NOME ATUALIZADO NO TOKEN:', session.user.name);
+        }
+        if (session.user?.image) {
+          token.picture = session.user.image;
+          console.log('✅ IMAGEM ATUALIZADA NO TOKEN:', session.user.image);
+        }
       }
       
       // FORÇAR SUPERADMIN SE FOR O EMAIL CORRETO
-      if (user?.email === 'admin@rsystem.com') {
+      if (user?.email === 'admin@rsystem.com' || token.email === 'admin@rsystem.com') {
         token.role = 'superadmin';
-        console.log('🔧 FORÇANDO ROLE SUPERADMIN PARA:', user.email);
+        console.log('🔧 FORÇANDO ROLE SUPERADMIN PARA:', user?.email || token.email);
       }
       
       return token;
     },
     async session({ session, token }) {
       console.log('📋 SESSION CALLBACK:', { 
-        tokenRole: token.role, 
+        tokenRole: token.role,
+        tokenName: token.name,
         sessionUserRole: session.user?.role,
-        sessionUserEmail: session.user?.email 
+        sessionUserEmail: session.user?.email,
+        sessionUserName: session.user?.name
       });
       
       if (token) {
         session.user.id = token.sub!;
         session.user.role = token.role as string;
+        
+        // Atualizar nome e imagem do token se existirem
+        if (token.name) {
+          session.user.name = token.name as string;
+        }
+        if (token.picture) {
+          session.user.image = token.picture as string;
+        }
         
         // FORÇAR SUPERADMIN SE FOR O EMAIL CORRETO
         if (session.user.email === 'admin@rsystem.com') {
@@ -471,7 +498,8 @@ export const authOptions: NextAuthOptions = {
       
       console.log('✅ SESSION FINAL:', { 
         userRole: session.user?.role, 
-        userEmail: session.user?.email 
+        userEmail: session.user?.email,
+        userName: session.user?.name
       });
       
       return session;

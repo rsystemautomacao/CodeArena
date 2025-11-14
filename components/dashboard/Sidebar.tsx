@@ -14,7 +14,7 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -22,8 +22,12 @@ interface SidebarProps {
   userName?: string;
 }
 
-export default function Sidebar({ isOpen, onClose, userName }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, userName: propUserName }: SidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  
+  // Usar nome da sessão se disponível, senão usar prop
+  const userName = session?.user?.name || propUserName;
 
   const menuItems = [
     {
