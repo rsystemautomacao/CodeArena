@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { Loader2, ArrowLeft, Save, Plus, X, User, Mail, Phone, MapPin, Home, BookOpen, FileText } from 'lucide-react';
 
@@ -18,6 +19,7 @@ interface UserProfile {
 }
 
 export default function SettingsPage() {
+  const { data: session, update } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -68,6 +70,20 @@ export default function SettingsPage() {
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data?.error || 'Erro ao salvar configurações');
+      }
+
+      const updatedProfile = await response.json();
+
+      // Atualizar sessão do NextAuth para refletir o novo nome
+      if (update && session) {
+        await update({
+          ...session,
+          user: {
+            ...session.user,
+            name: updatedProfile.name,
+            image: updatedProfile.avatar || updatedProfile.image,
+          },
+        });
       }
 
       toast.success('Configurações salvas com sucesso!');
