@@ -488,16 +488,29 @@ export default function ProfilePage() {
                       <label htmlFor="course" className="block text-sm font-semibold text-gray-700 mb-2">
                         Curso {isFirstLogin && <span className="text-red-500">*</span>}
                       </label>
-                      <input
-                        type="text"
+                      <select
                         id="course"
                         name="course"
                         value={formData.course}
-                        onChange={handleInputChange}
+                        onChange={handleInputChange as any}
                         required={isFirstLogin}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black font-medium"
-                        placeholder="Ex: Ciência da Computação"
-                      />
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black font-medium bg-white"
+                      >
+                        <option value="">Selecione seu curso</option>
+                        <option value="Análise e Desenvolvimento de Sistemas">Análise e Desenvolvimento de Sistemas</option>
+                        <option value="Ciência da Computação">Ciência da Computação</option>
+                        <option value="Ciência de Dados">Ciência de Dados</option>
+                        <option value="Cybersecurity">Cybersecurity</option>
+                        <option value="EM Técnico em TI">EM Técnico em TI</option>
+                        <option value="Engenharia de Computação">Engenharia de Computação</option>
+                        <option value="Engenharia de Software">Engenharia de Software</option>
+                        <option value="Gestão da Tecnologia da Informação">Gestão da Tecnologia da Informação</option>
+                        <option value="Inteligência Artificial">Inteligência Artificial</option>
+                        <option value="Redes de Computadores">Redes de Computadores</option>
+                        <option value="Sistemas de Informação">Sistemas de Informação</option>
+                        <option value="Técnico em Informática">Técnico em Informática</option>
+                        <option value="Tecnologia em Informática">Tecnologia em Informática</option>
+                      </select>
                     </div>
 
                     {/* Semestre */}
