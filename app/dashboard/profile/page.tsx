@@ -98,7 +98,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -492,7 +492,7 @@ export default function ProfilePage() {
                         id="course"
                         name="course"
                         value={formData.course}
-                        onChange={handleInputChange as any}
+                        onChange={handleInputChange}
                         required={isFirstLogin}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black font-medium bg-white"
                       >
