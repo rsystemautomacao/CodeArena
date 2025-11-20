@@ -27,6 +27,11 @@ interface UserProfile {
   location?: string;
   avatar?: string;
   role: string;
+  profileCompleted?: boolean;
+  // Campos específicos para aluno
+  enrollment?: string;
+  course?: string;
+  semester?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,11 +49,22 @@ export default function ProfilePage() {
     phone: '',
     bio: '',
     location: '',
+    // Campos específicos para aluno
+    enrollment: '',
+    course: '',
+    semester: '',
     avatar: null as File | null
   });
 
+  // Verificar se é primeiro login
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
+
   useEffect(() => {
     fetchProfile();
+    
+    // Verificar se é primeiro login através da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    setIsFirstLogin(urlParams.get('firstLogin') === 'true');
   }, []);
 
   const fetchProfile = async () => {
@@ -63,6 +79,9 @@ export default function ProfilePage() {
           phone: profileData.phone || '',
           bio: profileData.bio || '',
           location: profileData.location || '',
+          enrollment: profileData.enrollment || '',
+          course: profileData.course || '',
+          semester: profileData.semester || '',
           avatar: null
         });
         if (profileData.avatar) {
@@ -141,6 +160,17 @@ export default function ProfilePage() {
       formDataToSend.append('bio', formData.bio);
       formDataToSend.append('location', formData.location);
       
+      // Campos específicos para aluno
+      if (session?.user?.role === 'aluno') {
+        formDataToSend.append('enrollment', formData.enrollment);
+        formDataToSend.append('course', formData.course);
+        formDataToSend.append('semester', formData.semester);
+        // Marcar perfil como completo se for primeiro login
+        if (isFirstLogin) {
+          formDataToSend.append('profileCompleted', 'true');
+        }
+      }
+      
       if (formData.avatar) {
         formDataToSend.append('avatar', formData.avatar);
       }
@@ -184,6 +214,13 @@ export default function ProfilePage() {
       });
 
       toast.success('Perfil atualizado com sucesso!');
+      
+      // Se for primeiro login, redirecionar para dashboard
+      if (isFirstLogin && updatedProfile.profileCompleted) {
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 1500);
+      }
       
       // Atualizar estado local
       setProfile(updatedProfile);
@@ -253,6 +290,27 @@ export default function ProfilePage() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Mensagem de primeiro login */}
+        {isFirstLogin && (
+          <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <User className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Complete seu perfil
+                </h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  <p>
+                    Bem-vindo ao CodeArena! Por favor, complete as informações do seu perfil para continuar.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Informações da Conta */}
           <div className="lg:col-span-1">
@@ -404,6 +462,62 @@ export default function ProfilePage() {
                     placeholder="Cidade, Estado"
                   />
                 </div>
+
+                {/* Campos específicos para aluno */}
+                {session?.user?.role === 'aluno' && (
+                  <>
+                    {/* Matrícula */}
+                    <div>
+                      <label htmlFor="enrollment" className="block text-sm font-semibold text-gray-700 mb-2">
+                        Matrícula {isFirstLogin && <span className="text-red-500">*</span>}
+                      </label>
+                      <input
+                        type="text"
+                        id="enrollment"
+                        name="enrollment"
+                        value={formData.enrollment}
+                        onChange={handleInputChange}
+                        required={isFirstLogin}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black font-medium"
+                        placeholder="Digite sua matrícula"
+                      />
+                    </div>
+
+                    {/* Curso */}
+                    <div>
+                      <label htmlFor="course" className="block text-sm font-semibold text-gray-700 mb-2">
+                        Curso {isFirstLogin && <span className="text-red-500">*</span>}
+                      </label>
+                      <input
+                        type="text"
+                        id="course"
+                        name="course"
+                        value={formData.course}
+                        onChange={handleInputChange}
+                        required={isFirstLogin}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black font-medium"
+                        placeholder="Ex: Ciência da Computação"
+                      />
+                    </div>
+
+                    {/* Semestre */}
+                    <div>
+                      <label htmlFor="semester" className="block text-sm font-semibold text-gray-700 mb-2">
+                        Semestre {isFirstLogin && <span className="text-red-500">*</span>}
+                      </label>
+                      <input
+                        type="text"
+                        id="semester"
+                        name="semester"
+                        value={formData.semester}
+                        onChange={handleInputChange}
+                        required={isFirstLogin}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black font-medium"
+                        placeholder="Ex: 3º Semestre"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Biografia */}
                 <div>

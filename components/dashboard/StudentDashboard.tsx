@@ -1,19 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { 
   BookOpen, 
   Users, 
-  LogOut, 
   Trophy,
   Clock,
   CheckCircle,
   AlertCircle,
-  Plus
+  Plus,
+  Menu
 } from 'lucide-react';
 import Link from 'next/link';
+import StudentSidebar from './StudentSidebar';
 
 interface Classroom {
   _id: string;
@@ -56,6 +57,7 @@ export default function StudentDashboard() {
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [inviteCode, setInviteCode] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -63,12 +65,37 @@ export default function StudentDashboard() {
 
   const fetchData = async () => {
     try {
-      // Aqui você faria as chamadas para a API para buscar dados do aluno
-      // Por enquanto, vamos usar dados mockados
-      setClassrooms([]);
-      setAssignments([]);
-      setRecentSubmissions([]);
+      setIsLoading(true);
+      
+      // Buscar turmas do aluno
+      const classroomsRes = await fetch('/api/classrooms');
+      if (classroomsRes.ok) {
+        const classroomsData = await classroomsRes.json();
+        setClassrooms(classroomsData.classrooms || []);
+      }
+
+      // Buscar atividades ativas
+      const assignmentsRes = await fetch('/api/assignments');
+      if (assignmentsRes.ok) {
+        const assignmentsData = await assignmentsRes.json();
+        // Filtrar apenas atividades ativas no momento
+        const now = new Date();
+        const activeAssignments = (assignmentsData.assignments || []).filter((a: Assignment) => {
+          const start = new Date(a.startDate);
+          const end = new Date(a.endDate);
+          return start <= now && end >= now;
+        });
+        setAssignments(activeAssignments);
+      }
+
+      // Buscar submissões recentes
+      const submissionsRes = await fetch('/api/submissions?limit=5');
+      if (submissionsRes.ok) {
+        const submissionsData = await submissionsRes.json();
+        setRecentSubmissions(submissionsData.submissions || []);
+      }
     } catch (error) {
+      console.error('Erro ao carregar dados:', error);
       toast.error('Erro ao carregar dados');
     } finally {
       setIsLoading(false);
@@ -83,17 +110,28 @@ export default function StudentDashboard() {
     }
 
     try {
-      // Aqui você faria a chamada para a API para entrar na turma
-      toast.success('Entrou na turma com sucesso!');
+      const response = await fetch('/api/classrooms/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ inviteCode }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || 'Erro ao entrar na turma');
+        return;
+      }
+
+      toast.success(data.message || 'Entrou na turma com sucesso!');
       setInviteCode('');
-      fetchData(); // Recarregar dados
+      await fetchData(); // Recarregar dados
     } catch (error) {
+      console.error('Erro ao entrar na turma:', error);
       toast.error('Erro ao entrar na turma');
     }
-  };
-
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/' });
   };
 
   const getStatusColor = (status: string) => {
@@ -145,27 +183,28 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <StudentSidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)}
+        userName={session?.user?.name}
+      />
+
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="mr-3 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
               <h1 className="text-2xl font-bold text-primary-500">CodeArena</h1>
               <span className="ml-4 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
                 Aluno
               </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                Olá, <span className="font-medium">{session?.user?.name}</span>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <LogOut className="w-4 h-4 mr-1" />
-                Sair
-              </button>
             </div>
           </div>
         </div>

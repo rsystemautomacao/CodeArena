@@ -3,6 +3,8 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
+import connectDB from './mongodb';
+import User from '@/models/User';
 
 // Debug das variáveis de ambiente
 console.log('🔍 DEBUG AUTH CONFIG:');
@@ -279,6 +281,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             role: user.role,
             image: user.image,
+            profileCompleted: user.profileCompleted || false,
           };
           
           console.log('🚀 RETORNANDO USUÁRIO:', userToReturn);
@@ -445,7 +448,24 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.name = user.name;
         token.picture = user.image;
-        console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', { role: user.role, name: user.name });
+        token.profileCompleted = user.profileCompleted;
+        console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', { role: user.role, name: user.name, profileCompleted: user.profileCompleted });
+      }
+      
+      // Buscar profileCompleted do banco apenas uma vez se não estiver no token
+      if (token.profileCompleted === undefined && token.email) {
+        try {
+          await connectDB();
+          const dbUser = await User.findOne({ email: token.email }).select('profileCompleted');
+          if (dbUser) {
+            token.profileCompleted = dbUser.profileCompleted || false;
+          } else {
+            token.profileCompleted = false;
+          }
+        } catch (error) {
+          console.error('Erro ao buscar profileCompleted:', error);
+          token.profileCompleted = false;
+        }
       }
       
       // Quando update() é chamado (trigger === 'update')
@@ -489,6 +509,11 @@ export const authOptions: NextAuthOptions = {
           session.user.image = token.picture as string;
         }
         
+        // Atualizar profileCompleted do token se existir
+        if (token.profileCompleted !== undefined) {
+          session.user.profileCompleted = token.profileCompleted as boolean;
+        }
+        
         // FORÇAR SUPERADMIN SE FOR O EMAIL CORRETO
         if (session.user.email === 'admin@rsystem.com') {
           session.user.role = 'superadmin';
@@ -499,7 +524,8 @@ export const authOptions: NextAuthOptions = {
       console.log('✅ SESSION FINAL:', { 
         userRole: session.user?.role, 
         userEmail: session.user?.email,
-        userName: session.user?.name
+        userName: session.user?.name,
+        profileCompleted: session.user?.profileCompleted
       });
       
       return session;

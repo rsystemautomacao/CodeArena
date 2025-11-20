@@ -8,6 +8,7 @@ export interface IUser extends Document {
   image?: string;
   role: 'superadmin' | 'professor' | 'aluno';
   isActive: boolean;
+  profileCompleted?: boolean; // Indica se o perfil foi completado (primeiro login)
   // Campos adicionais para professor
   phone?: string;
   bio?: string;
@@ -15,6 +16,10 @@ export interface IUser extends Document {
   address?: string;
   subjects?: string[]; // Matérias/disciplinas
   avatar?: string;
+  // Campos adicionais para aluno
+  enrollment?: string; // Matrícula
+  course?: string; // Curso
+  semester?: string; // Semestre
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +74,22 @@ const UserSchema = new Schema<IUser>({
   isActive: {
     type: Boolean,
     default: true,
+  },
+  profileCompleted: {
+    type: Boolean,
+    default: false,
+  },
+  enrollment: {
+    type: String,
+    trim: true,
+  },
+  course: {
+    type: String,
+    trim: true,
+  },
+  semester: {
+    type: String,
+    trim: true,
   },
 }, {
   timestamps: true,

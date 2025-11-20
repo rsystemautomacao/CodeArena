@@ -37,6 +37,11 @@ export async function GET(request: NextRequest) {
       image: user.image || user.avatar || '',
       role: user.role,
       isActive: user.isActive,
+      profileCompleted: user.profileCompleted || false,
+      // Campos específicos para aluno
+      enrollment: user.enrollment || '',
+      course: user.course || '',
+      semester: user.semester || '',
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
@@ -66,6 +71,11 @@ export async function PUT(request: NextRequest) {
     const address = formData.get('address') as string;
     const subjectsStr = formData.get('subjects') as string;
     const avatarFile = formData.get('avatar') as File;
+    // Campos específicos para aluno
+    const enrollment = formData.get('enrollment') as string;
+    const course = formData.get('course') as string;
+    const semester = formData.get('semester') as string;
+    const profileCompleted = formData.get('profileCompleted') === 'true';
     
     // Processar matérias (array de strings)
     let subjects: string[] = [];
@@ -102,6 +112,16 @@ export async function PUT(request: NextRequest) {
     existingUser.location = location;
     existingUser.address = address;
     existingUser.subjects = subjects;
+    
+    // Campos específicos para aluno
+    if (existingUser.role === 'aluno') {
+      existingUser.enrollment = enrollment || '';
+      existingUser.course = course || '';
+      existingUser.semester = semester || '';
+      if (profileCompleted) {
+        existingUser.profileCompleted = true;
+      }
+    }
 
     // Se uma nova foto foi enviada
     if (avatarFile && avatarFile.size > 0) {
@@ -170,6 +190,11 @@ export async function PUT(request: NextRequest) {
       image: savedUser.image || savedUser.avatar || '',
       role: savedUser.role,
       isActive: savedUser.isActive,
+      profileCompleted: savedUser.profileCompleted || false,
+      // Campos específicos para aluno
+      enrollment: savedUser.enrollment || '',
+      course: savedUser.course || '',
+      semester: savedUser.semester || '',
       createdAt: savedUser.createdAt,
       updatedAt: savedUser.updatedAt
     };

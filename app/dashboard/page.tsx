@@ -15,8 +15,26 @@ export default function Dashboard() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
+    } else if (status === 'authenticated' && session?.user) {
+      // Verificar se é aluno e se o perfil não foi completado
+      if (session.user.role === 'aluno' && !session.user.profileCompleted) {
+        // Verificar no banco de dados se realmente não completou
+        fetch('/api/profile')
+          .then(res => res.json())
+          .then(data => {
+            if (!data.profileCompleted && typeof window !== 'undefined' && window.location.pathname !== '/dashboard/profile') {
+              router.push('/dashboard/profile?firstLogin=true');
+            }
+          })
+          .catch(() => {
+            // Em caso de erro, verificar se está na página de perfil
+            if (typeof window !== 'undefined' && window.location.pathname !== '/dashboard/profile') {
+              router.push('/dashboard/profile?firstLogin=true');
+            }
+          });
+      }
     }
-  }, [status, router]);
+  }, [status, router, session]);
 
   if (status === 'loading') {
     return <LoadingSpinner />;
