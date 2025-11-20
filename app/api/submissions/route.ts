@@ -5,6 +5,7 @@ import { submitCode } from '@/lib/judge0';
 import connectDB from '@/lib/mongodb';
 import Submission from '@/models/Submission';
 import Exercise from '@/models/Exercise';
+import User from '@/models/User';
 import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
@@ -124,8 +125,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Erro na submissão:', error);
+    console.error('Stack trace:', error?.stack);
+    console.error('Error details:', {
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+    });
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      },
       { status: 500 }
     );
   }
@@ -150,10 +160,37 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
+    // Garantir que os modelos estão registrados
+    if (!mongoose.models.Submission) {
+      await import('@/models/Submission');
+    }
+
     const userObjectId = new mongoose.Types.ObjectId(session.user.id);
     const query: any = { user: userObjectId };
-    if (exerciseId) query.exercise = new mongoose.Types.ObjectId(exerciseId);
-    if (assignmentId) query.assignment = new mongoose.Types.ObjectId(assignmentId);
+    
+    if (exerciseId) {
+      try {
+        query.exercise = new mongoose.Types.ObjectId(exerciseId);
+      } catch (e: any) {
+        console.error('Erro ao converter exerciseId:', e);
+        return NextResponse.json(
+          { error: 'ID do exercício inválido' },
+          { status: 400 }
+        );
+      }
+    }
+    
+    if (assignmentId) {
+      try {
+        query.assignment = new mongoose.Types.ObjectId(assignmentId);
+      } catch (e: any) {
+        console.error('Erro ao converter assignmentId:', e);
+        return NextResponse.json(
+          { error: 'ID da atividade inválido' },
+          { status: 400 }
+        );
+      }
+    }
 
     const submissions = await Submission.find(query)
       .populate('exercise', 'title')
@@ -175,8 +212,17 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Erro ao buscar submissões:', error);
+    console.error('Stack trace:', error?.stack);
+    console.error('Error details:', {
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+    });
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      },
       { status: 500 }
     );
   }

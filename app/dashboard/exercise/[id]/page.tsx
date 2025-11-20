@@ -53,39 +53,29 @@ export default function ExercisePage() {
 
   const fetchExercise = useCallback(async () => {
     try {
-      // Aqui você faria a chamada para a API para buscar o exercício
-      // Por enquanto, vamos usar dados mockados
-      const mockExercise: Exercise = {
-        _id: id as string,
-        title: 'Soma de Dois Números',
-        description: `Escreva um programa que leia dois números inteiros e imprima a soma deles.
-
-**Entrada:**
-A entrada contém dois números inteiros.
-
-**Saída:**
-Imprima a soma dos dois números.`,
-        examples: [
-          {
-            input: '5 3',
-            expectedOutput: '8',
-            isHidden: false,
-          },
-          {
-            input: '10 20',
-            expectedOutput: '30',
-            isHidden: false,
-          },
-        ],
-        timeLimit: 2,
-        memoryLimit: 128,
-        difficulty: 'facil',
-        tags: ['matemática', 'básico'],
-      };
+      setIsLoading(true);
+      const response = await fetch(`/api/exercises/${id}`);
       
-      setExercise(mockExercise);
-    } catch (error) {
-      toast.error('Erro ao carregar exercício');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Erro ao carregar exercício');
+      }
+
+      const data = await response.json();
+      
+      if (data.exercise) {
+        // Converter testCases para examples se necessário
+        const exerciseData = {
+          ...data.exercise,
+          examples: data.exercise.examples || [],
+        };
+        setExercise(exerciseData);
+      } else {
+        throw new Error('Exercício não encontrado');
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar exercício:', error);
+      toast.error(error?.message || 'Erro ao carregar exercício');
     } finally {
       setIsLoading(false);
     }
@@ -310,6 +300,7 @@ Imprima a soma dos dois números.`,
               <CodeEditor
                 exerciseId={exercise._id}
                 language="python"
+                initialCode=""
                 onSubmit={handleCodeSubmit}
               />
             </div>

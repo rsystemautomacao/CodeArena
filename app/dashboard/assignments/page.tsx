@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { Loader2, Clock, Pencil, Trash2, Plus, ArrowLeft, Users } from 'lucide-react';
 
@@ -21,9 +22,11 @@ type AssignmentRow = {
 
 export default function AssignmentsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const isStudent = session?.user?.role === 'aluno';
 
   const loadAssignments = async () => {
     try {
@@ -123,18 +126,24 @@ export default function AssignmentsPage() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar ao painel
             </Link>
-            <h1 className="mt-2 text-3xl font-bold text-gray-900">Atividades</h1>
+            <h1 className="mt-2 text-3xl font-bold text-gray-900">
+              {isStudent ? 'Minhas Atividades' : 'Atividades'}
+            </h1>
             <p className="mt-1 text-gray-600">
-              Gerencie suas listas e provas
+              {isStudent 
+                ? 'Visualize e responda às atividades disponíveis' 
+                : 'Gerencie suas listas e provas'}
             </p>
           </div>
-          <Link
-            href="/dashboard/assignments/create"
-            className="inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Atividade
-          </Link>
+          {!isStudent && (
+            <Link
+              href="/dashboard/assignments/create"
+              className="inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Atividade
+            </Link>
+          )}
         </div>
       </header>
 
@@ -143,18 +152,22 @@ export default function AssignmentsPage() {
           <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
             <Clock className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-4 text-lg font-semibold text-gray-900">
-              Nenhuma atividade criada ainda
+              {isStudent ? 'Nenhuma atividade disponível' : 'Nenhuma atividade criada ainda'}
             </h3>
             <p className="mt-2 text-sm text-gray-600">
-              Comece criando sua primeira lista ou prova
+              {isStudent 
+                ? 'Aguarde professores publicarem atividades' 
+                : 'Comece criando sua primeira lista ou prova'}
             </p>
-            <Link
-              href="/dashboard/assignments/create"
-              className="mt-6 inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Criar Primeira Atividade
-            </Link>
+            {!isStudent && (
+              <Link
+                href="/dashboard/assignments/create"
+                className="mt-6 inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Primeira Atividade
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -219,27 +232,37 @@ export default function AssignmentsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="ml-4 flex items-center space-x-2">
+                    {!isStudent && (
+                      <div className="ml-4 flex items-center space-x-2">
+                        <Link
+                          href={`/dashboard/assignments/${assignment._id}/edit`}
+                          className="rounded-md border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(assignment._id)}
+                          disabled={deletingId === assignment._id}
+                          className="rounded-md border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                          title="Excluir"
+                        >
+                          {deletingId === assignment._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    )}
+                    {isStudent && active && (
                       <Link
-                        href={`/dashboard/assignments/${assignment._id}/edit`}
-                        className="rounded-md border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
-                        title="Editar"
+                        href={`/dashboard/assignments/${assignment._id}`}
+                        className="ml-4 rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
                       >
-                        <Pencil className="h-4 w-4" />
+                        Responder
                       </Link>
-                      <button
-                        onClick={() => handleDelete(assignment._id)}
-                        disabled={deletingId === assignment._id}
-                        className="rounded-md border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                        title="Excluir"
-                      >
-                        {deletingId === assignment._id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
               );

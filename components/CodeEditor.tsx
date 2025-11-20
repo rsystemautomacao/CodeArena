@@ -15,94 +15,15 @@ interface CodeEditorProps {
 }
 
 const LANGUAGE_TEMPLATES = {
-  python: `# Seu código Python aqui
-def main():
-    # Leia a entrada
-    n = int(input())
-    
-    # Processe os dados
-    resultado = n * 2
-    
-    # Imprima a saída
-    print(resultado)
-
-if __name__ == "__main__":
-    main()`,
+  python: `# Escreva seu código Python aqui`,
   
-  java: `import java.util.Scanner;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        
-        // Leia a entrada
-        int n = scanner.nextInt();
-        
-        // Processe os dados
-        int resultado = n * 2;
-        
-        // Imprima a saída
-        System.out.println(resultado);
-        
-        scanner.close();
-    }
-}`,
+  java: `// Escreva seu código Java aqui`,
   
-  c: `#include <stdio.h>
-
-int main() {
-    int n;
-    
-    // Leia a entrada
-    scanf("%d", &n);
-    
-    // Processe os dados
-    int resultado = n * 2;
-    
-    // Imprima a saída
-    printf("%d\\n", resultado);
-    
-    return 0;
-}`,
+  c: `// Escreva seu código C aqui`,
   
-  cpp: `#include <iostream>
-using namespace std;
-
-int main() {
-    int n;
-    
-    // Leia a entrada
-    cin >> n;
-    
-    // Processe os dados
-    int resultado = n * 2;
-    
-    // Imprima a saída
-    cout << resultado << endl;
-    
-    return 0;
-}`,
+  cpp: `// Escreva seu código C++ aqui`,
   
-  javascript: `// Seu código JavaScript aqui
-const readline = require('readline');
-
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-rl.on('line', (input) => {
-    // Leia a entrada
-    const n = parseInt(input);
-    
-    // Processe os dados
-    const resultado = n * 2;
-    
-    // Imprima a saída
-    console.log(resultado);
-    
-    rl.close();
-});`
+  javascript: `// Escreva seu código JavaScript aqui`
 };
 
 export default function CodeEditor({
@@ -113,6 +34,7 @@ export default function CodeEditor({
   onSubmit,
   readOnly = false
 }: CodeEditorProps) {
+  // Para alunos, sempre começar com template vazio
   const [code, setCode] = useState(initialCode || LANGUAGE_TEMPLATES[language as keyof typeof LANGUAGE_TEMPLATES] || '');
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [testInput, setTestInput] = useState('');
@@ -133,9 +55,8 @@ export default function CodeEditor({
 
   const handleLanguageChange = (newLanguage: string) => {
     setSelectedLanguage(newLanguage);
-    if (!initialCode) {
-      setCode(LANGUAGE_TEMPLATES[newLanguage as keyof typeof LANGUAGE_TEMPLATES] || '');
-    }
+    // Sempre usar template básico quando mudar linguagem
+    setCode(LANGUAGE_TEMPLATES[newLanguage as keyof typeof LANGUAGE_TEMPLATES] || '');
   };
 
   const handleTestCode = async () => {
@@ -298,8 +219,11 @@ export default function CodeEditor({
             tabSize: 2,
             insertSpaces: true,
             wordWrap: 'on',
+            fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+            colorDecorators: true,
+            cursorBlinking: 'smooth',
           }}
-          theme="vs-light"
+          theme="vs-dark"
         />
       </div>
 

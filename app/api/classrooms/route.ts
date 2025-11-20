@@ -120,8 +120,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ classrooms });
   } catch (error: any) {
     console.error('Erro ao buscar turmas:', error);
+    console.error('Stack trace:', error?.stack);
+    console.error('Error details:', {
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+    });
     return NextResponse.json(
-      { error: 'Erro interno do servidor', debug: error?.message || error?.toString() },
+      { 
+        error: 'Erro interno do servidor',
+        debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      },
       { status: 500 }
     );
   }

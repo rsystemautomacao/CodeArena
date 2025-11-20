@@ -70,8 +70,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Erro ao entrar na turma:', error);
+    console.error('Stack trace:', error?.stack);
+    console.error('Error details:', {
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+    });
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      },
       { status: 500 }
     );
   }
