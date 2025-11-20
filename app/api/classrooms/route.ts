@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Classroom from '@/models/Classroom';
 import User from '@/models/User';
+import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
   try {
@@ -102,8 +103,9 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 });
     } else if (session.user.role === 'aluno') {
       // Alunos veem turmas em que estão matriculados
+      const studentObjectId = new mongoose.Types.ObjectId(session.user.id);
       classrooms = await Classroom.find({ 
-        students: session.user.id,
+        students: studentObjectId,
         isActive: true 
       })
       .populate('professor', 'name email')

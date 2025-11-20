@@ -43,9 +43,14 @@ export default function StudentSidebar({ isOpen, onClose, userName: propUserName
       icon: Clock,
     },
     {
-      title: 'Exercícios',
+      title: 'Exercícios Públicos',
       href: '/dashboard/exercises',
       icon: BookOpen,
+    },
+    {
+      title: 'Minhas Submissões',
+      href: '/dashboard/submissions',
+      icon: FileText,
     },
     {
       title: 'Perfil',

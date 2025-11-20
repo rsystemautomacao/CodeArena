@@ -5,6 +5,7 @@ import { submitCode } from '@/lib/judge0';
 import connectDB from '@/lib/mongodb';
 import Submission from '@/models/Submission';
 import Exercise from '@/models/Exercise';
+import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,10 +39,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar submissão no banco
+    const userObjectId = new mongoose.Types.ObjectId(session.user.id);
+    const exerciseObjectId = new mongoose.Types.ObjectId(exerciseId);
+    const assignmentObjectId = assignmentId ? new mongoose.Types.ObjectId(assignmentId) : null;
+    
     const submission = await Submission.create({
-      user: session.user.id,
-      exercise: exerciseId,
-      assignment: assignmentId || null,
+      user: userObjectId,
+      exercise: exerciseObjectId,
+      assignment: assignmentObjectId,
       code,
       language,
       status: 'pending',
@@ -145,9 +150,10 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
-    const query: any = { user: session.user.id };
-    if (exerciseId) query.exercise = exerciseId;
-    if (assignmentId) query.assignment = assignmentId;
+    const userObjectId = new mongoose.Types.ObjectId(session.user.id);
+    const query: any = { user: userObjectId };
+    if (exerciseId) query.exercise = new mongoose.Types.ObjectId(exerciseId);
+    if (assignmentId) query.assignment = new mongoose.Types.ObjectId(assignmentId);
 
     const submissions = await Submission.find(query)
       .populate('exercise', 'title')

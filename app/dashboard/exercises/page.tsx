@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { Loader2, BookOpen, Pencil, Trash2, Plus, ArrowLeft, Eye } from 'lucide-react';
 
@@ -20,9 +21,11 @@ type ExerciseRow = {
 
 export default function ExercisesPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [exercises, setExercises] = useState<ExerciseRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const isStudent = session?.user?.role === 'aluno';
 
   const loadExercises = async () => {
     try {
@@ -124,18 +127,24 @@ export default function ExercisesPage() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar ao painel
             </Link>
-            <h1 className="mt-2 text-3xl font-bold text-gray-900">Exercícios</h1>
+            <h1 className="mt-2 text-3xl font-bold text-gray-900">
+              {isStudent ? 'Exercícios Públicos' : 'Exercícios'}
+            </h1>
             <p className="mt-1 text-gray-600">
-              Gerencie seus exercícios de programação
+              {isStudent 
+                ? 'Resolva exercícios de programação disponíveis' 
+                : 'Gerencie seus exercícios de programação'}
             </p>
           </div>
-          <Link
-            href="/dashboard/exercises/create"
-            className="inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Exercício
-          </Link>
+          {!isStudent && (
+            <Link
+              href="/dashboard/exercises/create"
+              className="inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Exercício
+            </Link>
+          )}
         </div>
       </header>
 
@@ -144,18 +153,22 @@ export default function ExercisesPage() {
           <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
             <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-4 text-lg font-semibold text-gray-900">
-              Nenhum exercício criado ainda
+              {isStudent ? 'Nenhum exercício disponível' : 'Nenhum exercício criado ainda'}
             </h3>
             <p className="mt-2 text-sm text-gray-600">
-              Comece criando seu primeiro exercício de programação
+              {isStudent 
+                ? 'Aguarde professores publicarem exercícios'
+                : 'Comece criando seu primeiro exercício de programação'}
             </p>
-            <Link
-              href="/dashboard/exercises/create"
-              className="mt-6 inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Criar Primeiro Exercício
-            </Link>
+            {!isStudent && (
+              <Link
+                href="/dashboard/exercises/create"
+                className="mt-6 inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Primeiro Exercício
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -204,29 +217,33 @@ export default function ExercisesPage() {
                     <Link
                       href={`/dashboard/exercise/${exercise._id}`}
                       className="rounded-md border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
-                      title="Visualizar"
+                      title={isStudent ? "Resolver" : "Visualizar"}
                     >
                       <Eye className="h-4 w-4" />
                     </Link>
-                    <Link
-                      href={`/dashboard/exercises/${exercise._id}/edit`}
-                      className="rounded-md border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
-                      title="Editar"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(exercise._id)}
-                      disabled={deletingId === exercise._id}
-                      className="rounded-md border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                      title="Excluir"
-                    >
-                      {deletingId === exercise._id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </button>
+                    {!isStudent && (
+                      <>
+                        <Link
+                          href={`/dashboard/exercises/${exercise._id}/edit`}
+                          className="rounded-md border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(exercise._id)}
+                          disabled={deletingId === exercise._id}
+                          className="rounded-md border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                          title="Excluir"
+                        >
+                          {deletingId === exercise._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

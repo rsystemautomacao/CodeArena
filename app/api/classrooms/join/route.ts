@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Classroom from '@/models/Classroom';
 import User from '@/models/User';
+import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +42,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o aluno já está na turma
-    if (classroom.students.includes(session.user.id)) {
+    const studentObjectId = new mongoose.Types.ObjectId(session.user.id);
+    const isAlreadyEnrolled = classroom.students.some((studentId: any) => 
+      studentId.toString() === session.user.id
+    );
+
+    if (isAlreadyEnrolled) {
       return NextResponse.json(
         { error: 'Você já está matriculado nesta turma' },
         { status: 400 }
@@ -50,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Adicionar aluno à turma
     await Classroom.findByIdAndUpdate(classroom._id, {
-      $push: { students: session.user.id }
+      $push: { students: studentObjectId }
     });
 
     return NextResponse.json({

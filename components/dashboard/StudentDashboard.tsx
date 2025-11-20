@@ -202,9 +202,11 @@ export default function StudentDashboard() {
                 <Menu className="h-6 w-6" />
               </button>
               <h1 className="text-2xl font-bold text-primary-500">CodeArena</h1>
-              <span className="ml-4 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                Aluno
-              </span>
+              {session?.user?.name && (
+                <span className="ml-4 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                  {session.user.name}
+                </span>
+              )}
             </div>
           </div>
         </div>

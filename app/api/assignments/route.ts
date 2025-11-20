@@ -5,6 +5,7 @@ import connectDB from '@/lib/mongodb';
 import Assignment from '@/models/Assignment';
 import Classroom from '@/models/Classroom';
 import Exercise from '@/models/Exercise';
+import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
   try {
@@ -148,8 +149,9 @@ export async function GET(request: NextRequest) {
         assignmentsQuery.classroom = classroomId;
       }
     } else if (session.user.role === 'aluno') {
+      const studentObjectId = new mongoose.Types.ObjectId(session.user.id);
       const classrooms = await Classroom.find({
-        students: session.user.id,
+        students: studentObjectId,
         isActive: true,
       }).select('_id');
 
