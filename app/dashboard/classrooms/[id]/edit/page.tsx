@@ -52,7 +52,7 @@ export default function EditClassroomPage() {
     if (classroomId) {
       loadClassroom();
     }
-  }, [classroomId]);
+  }, [classroomId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

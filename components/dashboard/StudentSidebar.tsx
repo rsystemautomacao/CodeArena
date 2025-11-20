@@ -10,6 +10,7 @@ import {
   Clock,
   User,
   LogOut,
+  FileText,
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 

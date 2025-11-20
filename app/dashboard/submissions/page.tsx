@@ -52,7 +52,7 @@ export default function SubmissionsPage() {
 
   useEffect(() => {
     fetchSubmissions();
-  }, [page]);
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSubmissions = async () => {
     try {
