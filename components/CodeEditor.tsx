@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Editor from '@monaco-editor/react';
 import { Play, Send, RotateCcw, Settings } from 'lucide-react';
@@ -36,9 +36,13 @@ export default function CodeEditor({
   readOnly = false
 }: CodeEditorProps) {
   const router = useRouter();
-  // Para alunos, sempre começar com template vazio (sem código funcional pré-preenchido)
-  // Sempre usar apenas o template básico, ignorando qualquer código inicial fornecido
-  const [code, setCode] = useState(LANGUAGE_TEMPLATES[language as keyof typeof LANGUAGE_TEMPLATES] || '');
+  // Se initialCode foi fornecido (ex: vindo de uma submissão anterior), usar ele
+  // Caso contrário, usar template básico
+  const [code, setCode] = useState(
+    initialCode && initialCode.trim().length > 10 
+      ? initialCode 
+      : LANGUAGE_TEMPLATES[language as keyof typeof LANGUAGE_TEMPLATES] || ''
+  );
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [testInput, setTestInput] = useState('');
   const [testOutput, setTestOutput] = useState('');
@@ -71,6 +75,25 @@ export default function CodeEditor({
     }
     // Se não, mantém o código atual (não apaga)
   };
+
+  // Atualizar código quando initialCode mudar (ex: quando vier da URL)
+  useEffect(() => {
+    if (initialCode && initialCode.trim().length > 10) {
+      setCode(initialCode);
+    }
+  }, [initialCode]);
+
+  // Atualizar linguagem quando language prop mudar
+  useEffect(() => {
+    if (language && language !== selectedLanguage) {
+      setSelectedLanguage(language);
+      // Se não houver código válido, usar template da nova linguagem
+      const currentTemplate = LANGUAGE_TEMPLATES[selectedLanguage as keyof typeof LANGUAGE_TEMPLATES];
+      if (code.trim() === currentTemplate || code.trim().length < 10) {
+        setCode(LANGUAGE_TEMPLATES[language as keyof typeof LANGUAGE_TEMPLATES] || '');
+      }
+    }
+  }, [language]);
 
   const handleTestCode = async () => {
     if (!code.trim()) {
