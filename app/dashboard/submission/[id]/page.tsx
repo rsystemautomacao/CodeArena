@@ -49,7 +49,7 @@ export default function SubmissionResultPage() {
     if (id) {
       fetchSubmission();
     }
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSubmission = async () => {
     try {

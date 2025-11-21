@@ -117,38 +117,24 @@ export default function AssignmentsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-          <div>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-800"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar ao painel
-            </Link>
-            <h1 className="mt-2 text-3xl font-bold text-gray-900">
-              {isStudent ? 'Minhas Atividades' : 'Atividades'}
-            </h1>
-            <p className="mt-1 text-gray-600">
-              {isStudent 
-                ? 'Visualize e responda às atividades disponíveis' 
-                : 'Gerencie suas listas e provas'}
-            </p>
-          </div>
-          {!isStudent && (
-            <Link
-              href="/dashboard/assignments/create"
-              className="inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Atividade
-            </Link>
-          )}
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-6 py-8">
+      <DashboardHeader title={isStudent ? "Minhas Atividades" : "Atividades"} />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <p className="text-gray-600 mb-6">
+          {isStudent 
+            ? 'Visualize e responda às atividades disponíveis' 
+            : 'Gerencie suas listas e provas'}
+        </p>
+        
+        {!isStudent && (
+          <Link
+            href="/dashboard/assignments/create"
+            className="inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700 mb-6"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Atividade
+          </Link>
+        )}
         {assignments.length === 0 ? (
           <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
             <Clock className="mx-auto h-12 w-12 text-gray-400" />
