@@ -28,7 +28,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    const dbConnection = await connectDB();
+    if (!dbConnection) {
+      console.error('Erro: Não foi possível conectar ao banco de dados');
+      return NextResponse.json(
+        { error: 'Erro ao conectar com o banco de dados' },
+        { status: 500 }
+      );
+    }
+
+    // Garantir que os modelos estão registrados
+    const Classroom = (await import('@/models/Classroom')).default;
+
+    if (!Classroom) {
+      console.error('Erro: Modelo Classroom não encontrado');
+      return NextResponse.json(
+        { error: 'Erro ao carregar modelo do banco de dados' },
+        { status: 500 }
+      );
+    }
 
     // Gerar código de convite único
     const generateInviteCode = () => {
