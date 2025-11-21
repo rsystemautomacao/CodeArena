@@ -26,8 +26,8 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || (session.user.role !== 'professor' && session.user.role !== 'superadmin')) {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const { id } = params;
@@ -38,13 +38,41 @@ export async function GET(
 
     await connectDB();
 
-    const classroom =
-      session.user.role === 'superadmin'
-        ? await Classroom.findById(id).populate('students', 'name email').populate('professor', 'name email')
-        : await Classroom.findOne({
-            _id: id,
-            professor: session.user.id,
-          }).populate('students', 'name email');
+    let userObjectId: mongoose.Types.ObjectId;
+    try {
+      userObjectId = new mongoose.Types.ObjectId(session.user.id);
+    } catch (e: any) {
+      return NextResponse.json({ error: 'ID do usuário inválido' }, { status: 400 });
+    }
+
+    // Buscar turma e verificar se o usuário tem acesso
+    let classroom;
+    if (session.user.role === 'superadmin' || session.user.role === 'professor') {
+      // Professores veem apenas suas próprias turmas (exceto superadmin)
+      if (session.user.role === 'superadmin') {
+        classroom = await Classroom.findById(id)
+          .populate('students', 'name email')
+          .populate('professor', 'name email');
+      } else {
+        classroom = await Classroom.findOne({
+          _id: id,
+          professor: userObjectId,
+        })
+          .populate('students', 'name email')
+          .populate('professor', 'name email');
+      }
+    } else if (session.user.role === 'aluno') {
+      // Alunos veem turmas em que estão matriculados
+      classroom = await Classroom.findOne({
+        _id: id,
+        students: userObjectId,
+        isActive: true,
+      })
+        .populate('students', 'name email')
+        .populate('professor', 'name email');
+    } else {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
 
     if (!classroom) {
       return NextResponse.json({ error: 'Turma não encontrada' }, { status: 404 });

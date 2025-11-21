@@ -252,7 +252,10 @@ export default function StudentDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <Link
+            href="/dashboard/classrooms/student"
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="p-2 bg-primary-100 rounded-lg">
                 <Users className="w-6 h-6 text-primary-500" />
@@ -262,9 +265,12 @@ export default function StudentDashboard() {
                 <p className="text-2xl font-bold text-gray-900">{classrooms.length}</p>
               </div>
             </div>
-          </div>
+          </Link>
           
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <Link
+            href="/dashboard/assignments"
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="p-2 bg-success-100 rounded-lg">
                 <BookOpen className="w-6 h-6 text-success-500" />
@@ -274,19 +280,24 @@ export default function StudentDashboard() {
                 <p className="text-2xl font-bold text-gray-900">{assignments.length}</p>
               </div>
             </div>
-          </div>
+          </Link>
           
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <Link
+            href="/dashboard/submissions"
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
                 <CheckCircle className="w-6 h-6 text-green-500" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Exercícios Resolvidos</p>
-                <p className="text-2xl font-bold text-gray-900">-</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {recentSubmissions.filter(s => s.status === 'accepted').length}
+                </p>
               </div>
             </div>
-          </div>
+          </Link>
           
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex items-center">

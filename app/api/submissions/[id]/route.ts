@@ -89,17 +89,35 @@ export async function GET(
         );
       }
 
+      // Verificar se exercise foi populado corretamente
+      const exerciseData = typeof submission.exercise === 'object' && submission.exercise !== null
+        ? {
+            _id: submission.exercise._id.toString(),
+            title: submission.exercise.title || 'Exercício não encontrado',
+          }
+        : {
+            _id: submission.exercise.toString(),
+            title: 'Exercício não encontrado',
+          };
+
+      // Verificar se assignment foi populado corretamente
+      const assignmentData = submission.assignment && typeof submission.assignment === 'object' && submission.assignment !== null
+        ? {
+            _id: submission.assignment._id.toString(),
+            title: submission.assignment.title || 'Atividade não encontrada',
+          }
+        : submission.assignment
+        ? {
+            _id: submission.assignment.toString(),
+            title: 'Atividade não encontrada',
+          }
+        : undefined;
+
       return NextResponse.json({
         submission: {
-          _id: submission._id,
-          exercise: {
-            _id: submission.exercise._id,
-            title: submission.exercise.title,
-          },
-          assignment: submission.assignment ? {
-            _id: submission.assignment._id,
-            title: submission.assignment.title,
-          } : undefined,
+          _id: submission._id.toString(),
+          exercise: exerciseData,
+          assignment: assignmentData,
           code: submission.code,
           language: submission.language,
           status: submission.status,
