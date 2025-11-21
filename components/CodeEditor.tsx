@@ -133,11 +133,33 @@ export default function CodeEditor({
 
       const data = await response.json();
 
-      if (data.success) {
+      // Verificar se a resposta HTTP indica erro
+      if (!response.ok) {
+        toast.error(data.error || 'Erro ao submeter código');
+        return;
+      }
+
+      // Verificar se o status da submissão é aceito
+      if (data.success && data.status === 'accepted') {
         toast.success('Código submetido com sucesso!');
         onSubmit?.(code, selectedLanguage);
       } else {
-        toast.error(data.error || 'Erro ao submeter código');
+        // Se não foi aceito, mostrar erro específico
+        let errorMessage = data.error || data.message || 'Erro ao submeter código';
+        
+        // Se for erro de compilação, mostrar mensagem detalhada
+        if (data.status === 'compilation_error') {
+          errorMessage = `Erro de compilação: ${data.message || errorMessage}`;
+          if (data.testResults && data.testResults[0]?.output) {
+            errorMessage += `\n${data.testResults[0].output}`;
+          }
+        } else if (data.status === 'wrong_answer') {
+          errorMessage = `Resposta incorreta: ${data.message || errorMessage}`;
+        } else if (data.status === 'runtime_error') {
+          errorMessage = `Erro de execução: ${data.message || errorMessage}`;
+        }
+        
+        toast.error(errorMessage, { duration: 5000 });
       }
     } catch (error) {
       toast.error('Erro ao submeter código');

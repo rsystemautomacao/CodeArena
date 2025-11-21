@@ -202,8 +202,10 @@ export async function submitCode(
         message,
         time: result.time ? parseFloat(result.time) : undefined,
         memory: result.memory,
-        output: result.stdout || result.stderr || result.compile_output,
+        output: result.stdout || result.stderr || result.compile_output || '',
         expectedOutput: testCase.expectedOutput,
+        // Incluir detalhes completos do erro de compilação
+        compilationError: status === 'compilation_error' ? (result.compile_output || result.stderr || '') : undefined,
       });
     }
 
