@@ -1,0 +1,134 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import connectDB from '@/lib/mongodb';
+import mongoose from 'mongoose';
+
+// Importar modelos para garantir que estejam registrados
+import '@/models/User';
+import '@/models/Exercise';
+import '@/models/Submission';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { error: 'Não autorizado' },
+        { status: 401 }
+      );
+    }
+
+    if (!session.user.id) {
+      console.error('Session user ID não encontrado:', session.user);
+      return NextResponse.json(
+        { error: 'ID do usuário não encontrado na sessão' },
+        { status: 400 }
+      );
+    }
+
+    const { id } = params;
+
+    const dbConnection = await connectDB();
+    if (!dbConnection) {
+      console.error('Erro: Não foi possível conectar ao banco de dados');
+      return NextResponse.json(
+        { error: 'Erro ao conectar com o banco de dados' },
+        { status: 500 }
+      );
+    }
+
+    // Garantir que os modelos estão registrados
+    const Submission = (await import('@/models/Submission')).default;
+
+    if (!Submission) {
+      console.error('Erro: Modelo Submission não encontrado');
+      return NextResponse.json(
+        { error: 'Erro ao carregar modelo do banco de dados' },
+        { status: 500 }
+      );
+    }
+
+    let userObjectId: mongoose.Types.ObjectId;
+    let submissionObjectId: mongoose.Types.ObjectId;
+    
+    try {
+      userObjectId = new mongoose.Types.ObjectId(session.user.id);
+      submissionObjectId = new mongoose.Types.ObjectId(id);
+    } catch (e: any) {
+      console.error('Erro ao converter IDs:', e);
+      return NextResponse.json(
+        { error: 'ID inválido fornecido' },
+        { status: 400 }
+      );
+    }
+
+    try {
+      // Buscar submissão específica do usuário
+      const submission = await Submission.findById(submissionObjectId)
+        .populate('exercise', 'title')
+        .populate('assignment', 'title')
+        .populate('user', 'name email');
+
+      if (!submission) {
+        return NextResponse.json(
+          { error: 'Submissão não encontrada' },
+          { status: 404 }
+        );
+      }
+
+      // Verificar se a submissão pertence ao usuário logado
+      if (submission.user.toString() !== userObjectId.toString()) {
+        return NextResponse.json(
+          { error: 'Acesso negado - esta submissão não pertence a você' },
+          { status: 403 }
+        );
+      }
+
+      return NextResponse.json({
+        submission: {
+          _id: submission._id,
+          exercise: {
+            _id: submission.exercise._id,
+            title: submission.exercise.title,
+          },
+          assignment: submission.assignment ? {
+            _id: submission.assignment._id,
+            title: submission.assignment.title,
+          } : undefined,
+          code: submission.code,
+          language: submission.language,
+          status: submission.status,
+          result: submission.result,
+          submittedAt: submission.submittedAt,
+        },
+      });
+    } catch (e: any) {
+      console.error('Erro ao buscar submissão do banco:', e);
+      return NextResponse.json(
+        { error: 'Erro ao buscar submissão' },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
+    console.error('Erro ao buscar submissão:', error);
+    console.error('Stack trace:', error?.stack);
+    console.error('Error details:', {
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+    });
+    return NextResponse.json(
+      { 
+        error: 'Erro interno do servidor',
+        debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
+

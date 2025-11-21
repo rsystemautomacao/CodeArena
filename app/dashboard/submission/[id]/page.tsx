@@ -53,21 +53,24 @@ export default function SubmissionResultPage() {
   const fetchSubmission = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/submissions?exerciseId=${exerciseId || ''}&limit=100`);
+      const response = await fetch(`/api/submissions/${id}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Erro ao carregar submissão');
+      }
+
       const data = await response.json();
       
-      if (data.submissions) {
-        const found = data.submissions.find((s: Submission) => s._id === id);
-        if (found) {
-          setSubmission(found);
-        } else {
-          toast.error('Submissão não encontrada');
-          router.back();
-        }
+      if (data.submission) {
+        setSubmission(data.submission);
+      } else {
+        toast.error('Submissão não encontrada');
+        router.back();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao buscar submissão:', error);
-      toast.error('Erro ao carregar submissão');
+      toast.error(error?.message || 'Erro ao carregar submissão');
       router.back();
     } finally {
       setIsLoading(false);
