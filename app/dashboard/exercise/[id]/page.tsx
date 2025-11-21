@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import CodeEditor from '@/components/CodeEditor';
@@ -46,10 +46,16 @@ interface Submission {
 
 export default function ExercisePage() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Obter código e linguagem da URL se vierem de uma submissão anterior
+  const codeFromUrl = searchParams.get('code');
+  const languageFromUrl = searchParams.get('language');
+  const submissionIdFromUrl = searchParams.get('submissionId');
 
   const fetchExercise = useCallback(async () => {
     try {

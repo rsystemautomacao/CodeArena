@@ -83,15 +83,42 @@ export async function GET(
 
       // Verificar se a submissão pertence ao usuário logado
       // submission.user pode ser um ObjectId ou um objeto populado
-      const submissionUserId = typeof submission.user === 'object' && submission.user !== null && '_id' in submission.user
-        ? submission.user._id.toString()
-        : submission.user.toString();
+      let submissionUserId: string;
       
-      if (submissionUserId !== userObjectId.toString()) {
+      if (!submission.user) {
+        console.error('❌ Submissão sem campo user:', submission);
+        return NextResponse.json(
+          { error: 'Submissão inválida - campo user não encontrado' },
+          { status: 500 }
+        );
+      }
+      
+      if (typeof submission.user === 'object' && submission.user !== null && '_id' in submission.user) {
+        // Objeto populado
+        submissionUserId = submission.user._id.toString();
+      } else if (typeof submission.user === 'string') {
+        // ObjectId como string
+        submissionUserId = submission.user;
+      } else {
+        // ObjectId do mongoose
+        submissionUserId = submission.user.toString();
+      }
+      
+      const userObjectIdString = userObjectId.toString();
+      
+      console.log('🔍 VERIFICANDO ACESSO:', {
+        submissionUserId,
+        userObjectIdString,
+        sessionUserId: session.user.id,
+        match: submissionUserId === userObjectIdString
+      });
+      
+      if (submissionUserId !== userObjectIdString) {
         console.error('❌ ACESSO NEGADO - IDs diferentes:', {
           submissionUserId,
-          userObjectId: userObjectId.toString(),
-          sessionUserId: session.user.id
+          userObjectIdString,
+          sessionUserId: session.user.id,
+          submissionId: submission._id.toString()
         });
         return NextResponse.json(
           { error: 'Acesso negado - esta submissão não pertence a você' },

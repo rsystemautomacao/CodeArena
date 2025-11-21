@@ -35,7 +35,7 @@ export default function StudentSidebar({ isOpen, onClose, userName: propUserName
     },
     {
       title: 'Minhas Turmas',
-      href: '/dashboard/classrooms',
+      href: '/dashboard/classrooms/student',
       icon: Users,
     },
     {

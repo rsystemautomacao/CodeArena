@@ -54,25 +54,36 @@ export default function SubmissionResultPage() {
   const fetchSubmission = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/submissions/${id}`);
+      const response = await fetch(`/api/submissions/${id}`, {
+        cache: 'no-store'
+      });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || 'Erro ao carregar submissão');
+        const errorMessage = errorData?.error || 'Erro ao carregar submissão';
+        console.error('❌ ERRO AO BUSCAR SUBMISSÃO:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorMessage,
+          submissionId: id
+        });
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
       
       if (data.submission) {
+        console.log('✓ Submissão encontrada:', data.submission._id);
         setSubmission(data.submission);
       } else {
+        console.error('❌ Submissão não encontrada nos dados:', data);
         toast.error('Submissão não encontrada');
-        router.back();
+        // Não redirecionar imediatamente, dar chance de mostrar erro
       }
     } catch (error: any) {
-      console.error('Erro ao buscar submissão:', error);
+      console.error('❌ ERRO AO BUSCAR SUBMISSÃO:', error);
       toast.error(error?.message || 'Erro ao carregar submissão');
-      router.back();
+      // Não redirecionar automaticamente para dar feedback ao usuário
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +150,23 @@ export default function SubmissionResultPage() {
 
   const handleEditCode = () => {
     if (submission) {
-      router.push(`/dashboard/exercise/${submission.exercise._id}${assignmentId ? `?assignmentId=${assignmentId}` : ''}`);
+      // Passar código e linguagem na URL para o editor
+      const params = new URLSearchParams();
+      if (assignmentId) {
+        params.append('assignmentId', assignmentId);
+      }
+      if (submission.code) {
+        params.append('code', encodeURIComponent(submission.code));
+      }
+      if (submission.language) {
+        params.append('language', submission.language);
+      }
+      if (submission._id) {
+        params.append('submissionId', submission._id);
+      }
+      
+      const queryString = params.toString();
+      router.push(`/dashboard/exercise/${submission.exercise._id}${queryString ? `?${queryString}` : ''}`);
     }
   };
 
