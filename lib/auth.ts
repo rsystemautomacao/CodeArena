@@ -361,8 +361,10 @@ export const authOptions: NextAuthOptions = {
               { $set: { name: user.name, image: user.image } }
             );
             
-            // Definir o papel do usuário para o NextAuth
+            // CRÍTICO: Definir user.id com o _id do MongoDB
+            user.id = existingUser._id.toString();
             user.role = existingUser.role;
+            console.log('✅ USUÁRIO EXISTENTE - ID DEFINIDO:', user.id);
             console.log('✅ USUÁRIO EXISTENTE - ROLE DEFINIDO:', existingUser.role);
             
             await mongoose.disconnect();
@@ -378,7 +380,7 @@ export const authOptions: NextAuthOptions = {
 
           if (invite) {
             // Criar usuário como professor
-            await usersCollection.insertOne({
+            const insertResult = await usersCollection.insertOne({
               name: user.name!,
               email: user.email!,
               image: user.image,
@@ -388,9 +390,21 @@ export const authOptions: NextAuthOptions = {
               updatedAt: new Date()
             });
 
-            // Definir o papel do usuário para o NextAuth
-            user.role = 'professor';
-            console.log('✅ NOVO PROFESSOR CRIADO - ROLE DEFINIDO: professor');
+            // Buscar o usuário criado para obter o _id
+            const newUser = await usersCollection.findOne({ _id: insertResult.insertedId });
+            
+            if (newUser) {
+              // CRÍTICO: Definir user.id com o _id do MongoDB
+              user.id = newUser._id.toString();
+              user.role = 'professor';
+              console.log('✅ NOVO PROFESSOR CRIADO - ID DEFINIDO:', user.id);
+              console.log('✅ NOVO PROFESSOR CRIADO - ROLE DEFINIDO: professor');
+            } else {
+              // Fallback: usar insertedId se não conseguir buscar
+              user.id = insertResult.insertedId.toString();
+              user.role = 'professor';
+              console.log('⚠️ USANDO INSERTED_ID COMO FALLBACK:', user.id);
+            }
 
             // Marcar convite como usado
             await invitesCollection.updateOne(
@@ -403,7 +417,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Para alunos, permitir criação automática
-          await usersCollection.insertOne({
+          const insertResult = await usersCollection.insertOne({
             name: user.name!,
             email: user.email!,
             image: user.image,
@@ -413,9 +427,21 @@ export const authOptions: NextAuthOptions = {
             updatedAt: new Date()
           });
 
-          // Definir o papel do usuário para o NextAuth
-          user.role = 'aluno';
-          console.log('✅ NOVO ALUNO CRIADO - ROLE DEFINIDO: aluno');
+          // Buscar o usuário criado para obter o _id
+          const newUser = await usersCollection.findOne({ _id: insertResult.insertedId });
+          
+          if (newUser) {
+            // CRÍTICO: Definir user.id com o _id do MongoDB
+            user.id = newUser._id.toString();
+            user.role = 'aluno';
+            console.log('✅ NOVO ALUNO CRIADO - ID DEFINIDO:', user.id);
+            console.log('✅ NOVO ALUNO CRIADO - ROLE DEFINIDO: aluno');
+          } else {
+            // Fallback: usar insertedId se não conseguir buscar
+            user.id = insertResult.insertedId.toString();
+            user.role = 'aluno';
+            console.log('⚠️ USANDO INSERTED_ID COMO FALLBACK:', user.id);
+          }
 
           await mongoose.disconnect();
           return true;

@@ -26,12 +26,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // DEBUG: Log completo da sessão
+    console.log('🔍 DEBUG SESSÃO COMPLETA:', {
+      hasSession: !!session,
+      hasUser: !!session.user,
+      userId: session.user?.id,
+      userEmail: session.user?.email,
+      userRole: session.user?.role,
+      sessionComplete: JSON.stringify(session, null, 2)
+    });
+
     if (!session.user.id) {
-      console.error('Session user ID não encontrado:', session.user);
-      return NextResponse.json(
-        { error: 'ID do usuário não encontrado na sessão' },
-        { status: 400 }
-      );
+      console.error('❌ Session user ID não encontrado:', session.user);
+      console.error('❌ Tentando buscar ID do banco por email...');
+      
+      // Tentar buscar ID do banco por email como fallback
+      try {
+        await connectDB();
+        const User = (await import('@/models/User')).default;
+        const dbUser = await User.findOne({ email: session.user.email }).select('_id');
+        
+        if (dbUser) {
+          // Atualizar session.user.id temporariamente
+          (session.user as any).id = dbUser._id.toString();
+          console.log('✅ ID RECUPERADO DO BANCO:', dbUser._id.toString());
+        } else {
+          return NextResponse.json(
+            { error: 'ID do usuário não encontrado na sessão e no banco de dados' },
+            { status: 400 }
+          );
+        }
+      } catch (e: any) {
+        console.error('❌ Erro ao buscar ID do banco:', e);
+        return NextResponse.json(
+          { error: 'ID do usuário não encontrado na sessão' },
+          { status: 400 }
+        );
+      }
     }
 
     const { inviteCode } = await request.json();
