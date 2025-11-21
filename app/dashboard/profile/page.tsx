@@ -203,15 +203,20 @@ export default function ProfilePage() {
       const updatedProfile = await response.json();
       console.log('✅ PERFIL ATUALIZADO:', updatedProfile);
       
-      // Atualizar sessão do NextAuth
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-          name: updatedProfile.name,
-          image: updatedProfile.avatar || updatedProfile.image
-        }
-      });
+      // Atualizar sessão do NextAuth com os novos dados
+      try {
+        await update({
+          user: {
+            name: updatedProfile.name,
+            image: updatedProfile.avatar || updatedProfile.image || session?.user?.image
+          }
+        });
+        console.log('✅ SESSÃO ATUALIZADA COM SUCESSO');
+      } catch (updateError) {
+        console.error('⚠️ Erro ao atualizar sessão:', updateError);
+        // Recarregar a página para forçar atualização da sessão
+        window.location.reload();
+      }
 
       toast.success('Perfil atualizado com sucesso!');
       

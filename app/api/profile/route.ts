@@ -126,32 +126,56 @@ export async function PUT(request: NextRequest) {
     // Se uma nova foto foi enviada
     if (avatarFile && avatarFile.size > 0) {
       try {
-        // Criar pasta avatars se não existir
-        const avatarsDir = path.join(process.cwd(), 'public', 'avatars');
-        await mkdir(avatarsDir, { recursive: true });
-
-        // Gerar nome único para o arquivo
-        const timestamp = Date.now();
-        const fileExtension = path.extname(avatarFile.name);
-        const fileName = `avatar_${existingUser._id}_${timestamp}${fileExtension}`;
-        const filePath = path.join(avatarsDir, fileName);
-
-        // Converter File para Buffer e salvar
+        // Verificar se estamos em produção (Vercel)
+        // Em produção, não podemos salvar arquivos em public/ pois são temporários
+        // Vamos converter para base64 e salvar no banco, ou usar um serviço de storage
+        
+        // Converter File para Buffer
         const bytes = await avatarFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        await writeFile(filePath, buffer);
+        
+        // Verificar se é ambiente de produção (Vercel)
+        const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
+        
+        if (isProduction) {
+          // Em produção: converter para base64 e salvar no banco ou usar URL externa
+          // Por enquanto, vamos usar base64 como fallback
+          const base64Image = buffer.toString('base64');
+          const mimeType = avatarFile.type || 'image/jpeg';
+          const avatarUrl = `data:${mimeType};base64,${base64Image}`;
+          
+          existingUser.avatar = avatarUrl;
+          existingUser.image = avatarUrl;
+          
+          console.log('✅ AVATAR SALVO COMO BASE64 (PRODUÇÃO):', {
+            size: buffer.length,
+            mimeType
+          });
+        } else {
+          // Em desenvolvimento: salvar arquivo localmente
+          const avatarsDir = path.join(process.cwd(), 'public', 'avatars');
+          await mkdir(avatarsDir, { recursive: true });
 
-        // Atualizar URLs no banco
-        const avatarUrl = `/avatars/${fileName}`;
-        existingUser.avatar = avatarUrl;
-        existingUser.image = avatarUrl;
+          // Gerar nome único para o arquivo
+          const timestamp = Date.now();
+          const fileExtension = path.extname(avatarFile.name) || '.jpg';
+          const fileName = `avatar_${existingUser._id}_${timestamp}${fileExtension}`;
+          const filePath = path.join(avatarsDir, fileName);
 
-        console.log('✅ AVATAR SALVO:', {
-          fileName,
-          filePath,
-          avatarUrl,
-          size: buffer.length
-        });
+          await writeFile(filePath, buffer);
+
+          // Atualizar URLs no banco
+          const avatarUrl = `/avatars/${fileName}`;
+          existingUser.avatar = avatarUrl;
+          existingUser.image = avatarUrl;
+
+          console.log('✅ AVATAR SALVO LOCALMENTE (DESENVOLVIMENTO):', {
+            fileName,
+            filePath,
+            avatarUrl,
+            size: buffer.length
+          });
+        }
       } catch (error) {
         console.error('❌ ERRO AO SALVAR AVATAR:', error);
         // Continuar sem avatar se houver erro
@@ -173,7 +197,9 @@ export async function PUT(request: NextRequest) {
       name: savedUser.name,
       phone: savedUser.phone,
       bio: savedUser.bio,
-      location: savedUser.location
+      location: savedUser.location,
+      avatar: savedUser.avatar,
+      image: savedUser.image
     });
 
     // Criar objeto de resposta com todos os campos garantidos

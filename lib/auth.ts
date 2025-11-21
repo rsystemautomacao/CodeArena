@@ -438,18 +438,41 @@ export const authOptions: NextAuthOptions = {
         hasUser: !!user, 
         userRole: user?.role, 
         userEmail: user?.email,
+        userId: user?.id,
         tokenRole: token.role,
+        tokenSub: token.sub,
         trigger,
         sessionName: session?.user?.name
       });
       
       // Quando o usuário faz login
       if (user) {
+        // Garantir que token.sub seja definido com o ID do usuário
+        token.sub = user.id;
         token.role = user.role;
         token.name = user.name;
         token.picture = user.image;
         token.profileCompleted = user.profileCompleted;
-        console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', { role: user.role, name: user.name, profileCompleted: user.profileCompleted });
+        console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', { 
+          sub: token.sub,
+          role: user.role, 
+          name: user.name, 
+          profileCompleted: user.profileCompleted 
+        });
+      }
+      
+      // Garantir que token.sub sempre existe
+      if (!token.sub && token.email) {
+        try {
+          await connectDB();
+          const dbUser = await User.findOne({ email: token.email }).select('_id');
+          if (dbUser) {
+            token.sub = dbUser._id.toString();
+            console.log('✅ TOKEN.SUB DEFINIDO DO BANCO:', token.sub);
+          }
+        } catch (error) {
+          console.error('Erro ao buscar ID do usuário:', error);
+        }
       }
       
       // Buscar profileCompleted do banco apenas uma vez se não estiver no token
