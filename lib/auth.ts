@@ -684,7 +684,36 @@ export const authOptions: NextAuthOptions = {
         }
       }
       
+      // VALIDAÇÃO FINAL: Garantir que session.user.id existe
+      if (!session.user.id) {
+        console.error('❌ ERRO CRÍTICO: session.user.id não foi definido!', {
+          tokenSub: token.sub,
+          tokenEmail: token.email,
+          sessionUserEmail: session.user?.email
+        });
+        // Tentar uma última vez buscar do banco
+        if (session.user.email) {
+          try {
+            await connectDB();
+            const User = (await import('@/models/User')).default;
+            if (User) {
+              const dbUser = await User.findOne({ email: session.user.email }).select('_id role');
+              if (dbUser) {
+                session.user.id = dbUser._id.toString();
+                if (!session.user.role) {
+                  session.user.role = dbUser.role || 'aluno';
+                }
+                console.log('✅ SESSION USER ID DEFINIDO NO ÚLTIMO FALLBACK:', session.user.id);
+              }
+            }
+          } catch (error) {
+            console.error('❌ ERRO NO ÚLTIMO FALLBACK:', error);
+          }
+        }
+      }
+      
       console.log('✅ SESSION FINAL:', { 
+        userId: session.user?.id,
         userRole: session.user?.role, 
         userEmail: session.user?.email,
         userName: session.user?.name,
