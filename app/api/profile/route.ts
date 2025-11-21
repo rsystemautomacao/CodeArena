@@ -2,25 +2,55 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
-import User from '@/models/User';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+
+// Importar modelo para garantir que está registrado
+import '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.email) {
+    if (!session || !session.user) {
+      console.error('❌ GET PROFILE: Sessão não encontrada');
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    await connectDB();
+    if (!session.user.email) {
+      console.error('❌ GET PROFILE: Email não encontrado na sessão:', session.user);
+      return NextResponse.json({ error: 'Email não encontrado na sessão' }, { status: 401 });
+    }
 
-    const user = await User.findOne({ email: session.user.email })
-      .select('-password');
+    console.log('🔍 GET PROFILE: Buscando perfil para:', session.user.email);
 
-    if (!user) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+    const dbConnection = await connectDB();
+    if (!dbConnection) {
+      console.error('❌ GET PROFILE: Não foi possível conectar ao banco de dados');
+      return NextResponse.json({ error: 'Erro ao conectar com o banco de dados' }, { status: 500 });
+    }
+
+    // Garantir que o modelo está registrado
+    const UserModel = (await import('@/models/User')).default;
+    if (!UserModel) {
+      console.error('❌ GET PROFILE: Modelo User não encontrado');
+      return NextResponse.json({ error: 'Erro ao carregar modelo do banco de dados' }, { status: 500 });
+    }
+
+    let user;
+    try {
+      user = await UserModel.findOne({ email: session.user.email.toLowerCase() })
+        .select('-password');
+
+      if (!user) {
+        console.error('❌ GET PROFILE: Usuário não encontrado no banco:', session.user.email);
+        return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+      }
+
+      console.log('✅ GET PROFILE: Usuário encontrado:', user._id);
+    } catch (dbError: any) {
+      console.error('❌ GET PROFILE: Erro ao buscar usuário no banco:', dbError);
+      return NextResponse.json({ error: 'Erro ao buscar perfil no banco de dados' }, { status: 500 });
     }
 
     // Criar objeto de resposta com todos os campos garantidos
@@ -47,9 +77,18 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(userResponse);
-  } catch (error) {
-    console.error('Erro ao buscar perfil:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ GET PROFILE: Erro geral ao buscar perfil:', error);
+    console.error('❌ GET PROFILE: Stack trace:', error?.stack);
+    console.error('❌ GET PROFILE: Error details:', {
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+    });
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor',
+      debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
+    }, { status: 500 });
   }
 }
 
@@ -57,11 +96,35 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.email) {
+    console.log('🔍 PUT PROFILE: Sessão recebida:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userEmail: session?.user?.email,
+      userId: session?.user?.id
+    });
+    
+    if (!session || !session.user) {
+      console.error('❌ PUT PROFILE: Sessão não encontrada');
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    await connectDB();
+    if (!session.user.email) {
+      console.error('❌ PUT PROFILE: Email não encontrado na sessão:', session.user);
+      return NextResponse.json({ error: 'Email não encontrado na sessão' }, { status: 401 });
+    }
+
+    const dbConnection = await connectDB();
+    if (!dbConnection) {
+      console.error('❌ PUT PROFILE: Não foi possível conectar ao banco de dados');
+      return NextResponse.json({ error: 'Erro ao conectar com o banco de dados' }, { status: 500 });
+    }
+
+    // Garantir que o modelo está registrado
+    const User = (await import('@/models/User')).default;
+    if (!User) {
+      console.error('❌ PUT PROFILE: Modelo User não encontrado');
+      return NextResponse.json({ error: 'Erro ao carregar modelo do banco de dados' }, { status: 500 });
+    }
 
     const formData = await request.formData();
     const name = formData.get('name') as string;
@@ -98,12 +161,22 @@ export async function PUT(request: NextRequest) {
     });
 
     // Buscar o usuário existente
-    const existingUser = await User.findOne({ email: session.user.email });
+    console.log('🔍 PUT PROFILE: Buscando usuário no banco:', session.user.email);
+    
+    let existingUser;
+    try {
+      existingUser = await User.findOne({ email: session.user.email.toLowerCase() });
+    } catch (dbError: any) {
+      console.error('❌ PUT PROFILE: Erro ao buscar usuário no banco:', dbError);
+      return NextResponse.json({ error: 'Erro ao buscar usuário no banco de dados' }, { status: 500 });
+    }
     
     if (!existingUser) {
-      console.log('❌ USUÁRIO NÃO ENCONTRADO:', session.user.email);
+      console.error('❌ PUT PROFILE: Usuário não encontrado no banco:', session.user.email);
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
+
+    console.log('✅ PUT PROFILE: Usuário encontrado:', existingUser._id);
 
     // Atualizar os campos diretamente no objeto
     existingUser.name = name;
@@ -190,17 +263,26 @@ export async function PUT(request: NextRequest) {
     });
 
     // Salvar o documento
-    const savedUser = await existingUser.save();
-
-    console.log('✅ PERFIL SALVO COM SUCESSO:', {
-      id: savedUser._id,
-      name: savedUser.name,
-      phone: savedUser.phone,
-      bio: savedUser.bio,
-      location: savedUser.location,
-      avatar: savedUser.avatar,
-      image: savedUser.image
-    });
+    let savedUser;
+    try {
+      savedUser = await existingUser.save();
+      console.log('✅ PUT PROFILE: Perfil salvo com sucesso:', {
+        id: savedUser._id,
+        name: savedUser.name,
+        phone: savedUser.phone,
+        bio: savedUser.bio,
+        location: savedUser.location,
+        avatar: savedUser.avatar,
+        image: savedUser.image
+      });
+    } catch (saveError: any) {
+      console.error('❌ PUT PROFILE: Erro ao salvar usuário no banco:', saveError);
+      console.error('❌ PUT PROFILE: Stack trace:', saveError?.stack);
+      return NextResponse.json({ 
+        error: 'Erro ao salvar perfil no banco de dados',
+        debug: process.env.NODE_ENV === 'development' ? saveError?.message : undefined
+      }, { status: 500 });
+    }
 
     // Criar objeto de resposta com todos os campos garantidos
     const userResponse = {
@@ -228,8 +310,17 @@ export async function PUT(request: NextRequest) {
     console.log('🔍 RETORNANDO USUÁRIO SALVO:', userResponse);
 
     return NextResponse.json(userResponse);
-  } catch (error) {
-    console.error('❌ ERRO AO ATUALIZAR PERFIL:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ PUT PROFILE: Erro geral ao atualizar perfil:', error);
+    console.error('❌ PUT PROFILE: Stack trace:', error?.stack);
+    console.error('❌ PUT PROFILE: Error details:', {
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+    });
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor',
+      debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
+    }, { status: 500 });
   }
 }
