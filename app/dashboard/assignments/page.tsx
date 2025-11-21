@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { Loader2, Clock, Pencil, Trash2, Plus, ArrowLeft, Users } from 'lucide-react';
+import { Loader2, Clock, Pencil, Trash2, Plus, Users } from 'lucide-react';
+import DashboardHeader from '@/components/DashboardHeader';
 
 type AssignmentRow = {
   _id: string;

@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { 
-  ArrowLeft, 
   Users, 
   BookOpen, 
   Clock, 
@@ -17,6 +16,7 @@ import {
   Mail
 } from 'lucide-react';
 import Link from 'next/link';
+import DashboardHeader from '@/components/DashboardHeader';
 
 interface Classroom {
   _id: string;
@@ -153,21 +153,14 @@ export default function ClassroomDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <DashboardHeader title={classroom.name} />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <Link
-            href={isStudent ? "/dashboard/classrooms/student" : "/dashboard/classrooms"}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Voltar
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">{classroom.name}</h1>
-          {classroom.description && (
-            <p className="text-gray-600 mt-2">{classroom.description}</p>
-          )}
-        </div>
+        {classroom.description && (
+          <div className="mb-6">
+            <p className="text-gray-600">{classroom.description}</p>
+          </div>
+        )}
 
         {/* Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

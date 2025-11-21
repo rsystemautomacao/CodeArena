@@ -5,13 +5,13 @@ import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import CodeEditor from '@/components/CodeEditor';
+import DashboardHeader from '@/components/DashboardHeader';
 import { 
   BookOpen, 
   Clock, 
   Cpu, 
   CheckCircle, 
-  AlertCircle,
-  ArrowLeft
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 

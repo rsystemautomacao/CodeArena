@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import DashboardHeader from '@/components/DashboardHeader';
 import { 
-  ArrowLeft, 
   CheckCircle,
   XCircle,
   Clock,

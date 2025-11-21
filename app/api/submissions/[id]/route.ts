@@ -82,7 +82,17 @@ export async function GET(
       }
 
       // Verificar se a submissão pertence ao usuário logado
-      if (submission.user.toString() !== userObjectId.toString()) {
+      // submission.user pode ser um ObjectId ou um objeto populado
+      const submissionUserId = typeof submission.user === 'object' && submission.user !== null && '_id' in submission.user
+        ? submission.user._id.toString()
+        : submission.user.toString();
+      
+      if (submissionUserId !== userObjectId.toString()) {
+        console.error('❌ ACESSO NEGADO - IDs diferentes:', {
+          submissionUserId,
+          userObjectId: userObjectId.toString(),
+          sessionUserId: session.user.id
+        });
         return NextResponse.json(
           { error: 'Acesso negado - esta submissão não pertence a você' },
           { status: 403 }

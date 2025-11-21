@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { Loader2, BookOpen, Pencil, Trash2, Plus, ArrowLeft, Eye } from 'lucide-react';
+import { Loader2, BookOpen, Pencil, Trash2, Plus, Eye } from 'lucide-react';
+import DashboardHeader from '@/components/DashboardHeader';
 
 type ExerciseRow = {
   _id: string;

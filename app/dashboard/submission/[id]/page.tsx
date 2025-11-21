@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { CheckCircle, XCircle, AlertCircle, ArrowLeft, Edit, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Edit, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import DashboardHeader from '@/components/DashboardHeader';
 
 interface Submission {
   _id: string;
@@ -181,19 +182,10 @@ export default function SubmissionResultPage() {
   const StatusIcon = statusConfig.icon;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Voltar
-          </button>
-          <h1 className="text-3xl font-bold text-gray-900">Resultado da Submissão</h1>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <DashboardHeader title="Resultado da Submissão" />
+      
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Status Card */}
         <div className={`rounded-lg border-2 ${statusConfig.borderColor} ${statusConfig.bgColor} p-8 mb-6`}>
