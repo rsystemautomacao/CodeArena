@@ -221,6 +221,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Buscar mensagem de erro de compilação detalhada se houver
+    let compilationErrorDetails = '';
+    if (hasCompilationError) {
+      const compilationResult = result.results.find(r => r.status === 'compilation_error');
+      if (compilationResult) {
+        compilationErrorDetails = compilationResult.message || compilationResult.output || '';
+      }
+    }
+
     // Atualizar submissão com resultado
     await Submission.findByIdAndUpdate(submission._id, {
       status: finalStatus,
@@ -233,17 +242,22 @@ export async function POST(request: NextRequest) {
         },
         time: result.results[0]?.time,
         memory: result.results[0]?.memory,
+        compilationError: hasCompilationError ? compilationErrorDetails : undefined,
       },
     });
 
+    // CRÍTICO: Se houver erro de compilação ou qualquer erro, retornar success: false
+    const isAccepted = finalStatus === 'accepted' && !hasCompilationError && passedTests === totalTests;
+
     return NextResponse.json({
-      success: true,
+      success: isAccepted,
       submissionId: submission._id,
       status: finalStatus,
       message: finalMessage,
       testResults: result.results,
       passedTests,
       totalTests: result.results.length,
+      error: !isAccepted ? (hasCompilationError ? `Erro de compilação: ${compilationErrorDetails || finalMessage}` : finalMessage) : undefined,
     });
   } catch (error: any) {
     console.error('Erro na submissão:', error);
