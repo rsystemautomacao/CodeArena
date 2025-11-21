@@ -265,14 +265,14 @@ export default function ExercisePage() {
                   {exercise.examples.map((example, index) => (
                     <div key={index} className="bg-gray-50 rounded-lg p-3">
                       <div className="mb-2">
-                        <p className="text-xs font-medium text-gray-600 mb-1">Entrada:</p>
-                        <pre className="text-sm font-mono bg-white p-2 rounded border">
+                        <p className="text-xs font-medium text-gray-900 mb-1">Entrada:</p>
+                        <pre className="text-sm font-mono bg-white p-2 rounded border text-gray-900" style={{ color: '#111827' }}>
                           {example.input}
                         </pre>
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-gray-600 mb-1">Saída:</p>
-                        <pre className="text-sm font-mono bg-white p-2 rounded border">
+                        <p className="text-xs font-medium text-gray-900 mb-1">Saída:</p>
+                        <pre className="text-sm font-mono bg-white p-2 rounded border text-gray-900" style={{ color: '#111827' }}>
                           {example.expectedOutput}
                         </pre>
                       </div>

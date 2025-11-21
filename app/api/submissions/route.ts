@@ -30,6 +30,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validar que o código não está apenas com template vazio
+    const trimmedCode = code.trim();
+    const languageTemplates = {
+      python: '# Escreva seu código Python aqui',
+      java: '// Escreva seu código Java aqui',
+      c: '// Escreva seu código C aqui',
+      cpp: '// Escreva seu código C++ aqui',
+      javascript: '// Escreva seu código JavaScript aqui'
+    };
+    
+    const template = languageTemplates[language as keyof typeof languageTemplates];
+    if (!template || trimmedCode === template || trimmedCode.length < 10) {
+      return NextResponse.json(
+        { error: 'Por favor, escreva um código válido antes de submeter. O código não pode estar vazio ou apenas com comentários.' },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
     // Garantir que os modelos estão registrados
@@ -80,6 +98,21 @@ export async function POST(request: NextRequest) {
       expectedOutput: tc.expectedOutput,
     }));
 
+    if (!testCases || testCases.length === 0) {
+      await Submission.findByIdAndUpdate(submission._id, {
+        status: 'wrong_answer',
+        result: {
+          status: 'wrong_answer',
+          message: 'Exercício não possui casos de teste válidos',
+        },
+      });
+
+      return NextResponse.json(
+        { error: 'Exercício não possui casos de teste válidos' },
+        { status: 400 }
+      );
+    }
+
     const result = await submitCode(
       code,
       language,
@@ -104,18 +137,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!result.results || result.results.length === 0) {
+      await Submission.findByIdAndUpdate(submission._id, {
+        status: 'runtime_error',
+        result: {
+          status: 'runtime_error',
+          message: 'Nenhum resultado retornado do Judge0',
+        },
+      });
+
+      return NextResponse.json(
+        { error: 'Nenhum resultado retornado do Judge0' },
+        { status: 500 }
+      );
+    }
+
     // Determinar status final baseado nos resultados
+    // CRÍTICO: TODOS os testes devem passar para aceitar
     let finalStatus = 'accepted';
     let finalMessage = 'Resposta correta';
     let passedTests = 0;
+    let totalTests = result.results.length;
 
+    // Verificar se TODOS os testes passaram
     for (const testResult of result.results) {
       if (testResult.status === 'accepted') {
         passedTests++;
       } else {
+        // Se qualquer teste falhar, a submissão é rejeitada
         finalStatus = testResult.status;
-        finalMessage = testResult.message;
+        finalMessage = `Teste ${testResult.testCase} falhou: ${testResult.message}`;
+        if (testResult.output && testResult.expectedOutput) {
+          finalMessage += `\nSaída obtida: ${testResult.output.trim()}\nSaída esperada: ${testResult.expectedOutput.trim()}`;
+        }
         break; // Primeiro erro encontrado
+      }
+    }
+
+    // Se nem todos os testes passaram, a submissão é rejeitada
+    if (passedTests < totalTests) {
+      finalStatus = 'wrong_answer';
+      if (finalMessage === 'Resposta correta') {
+        finalMessage = `Apenas ${passedTests} de ${totalTests} testes passaram`;
       }
     }
 

@@ -103,6 +103,14 @@ export default function CodeEditor({
       return;
     }
 
+    // Validar que o código não está apenas com template
+    const trimmedCode = code.trim();
+    const currentTemplate = LANGUAGE_TEMPLATES[selectedLanguage as keyof typeof LANGUAGE_TEMPLATES];
+    if (trimmedCode === currentTemplate || trimmedCode.length < 10) {
+      toast.error('Por favor, escreva um código válido antes de submeter. O código não pode estar vazio ou apenas com comentários.');
+      return;
+    }
+
     if (!exerciseId) {
       toast.error('ID do exercício não encontrado');
       return;
@@ -234,24 +242,25 @@ export default function CodeEditor({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
             {/* Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
                 Entrada de Teste
               </label>
               <textarea
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
-                className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+                className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm text-gray-900 bg-white"
                 placeholder="Digite a entrada para testar seu código..."
+                style={{ color: '#111827' }}
               />
             </div>
 
             {/* Output */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
                 Saída
               </label>
-              <div className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm overflow-auto">
-                {testOutput || 'A saída aparecerá aqui...'}
+              <div className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md bg-white font-mono text-sm overflow-auto text-gray-900">
+                {testOutput || <span className="text-gray-500">A saída aparecerá aqui...</span>}
               </div>
             </div>
           </div>

@@ -157,8 +157,18 @@ export async function submitCode(
 
       switch (result.status.id) {
         case 3: // Accepted
-          status = 'accepted';
-          message = 'Resposta correta';
+          // Verificar se a saída realmente corresponde à esperada (comparação normalizada)
+          const actualOutput = (result.stdout || '').trim().replace(/\r\n/g, '\n');
+          const expectedOutput = (testCase.expectedOutput || '').trim().replace(/\r\n/g, '\n');
+          
+          // Comparação mais rigorosa - deve ser exatamente igual
+          if (actualOutput === expectedOutput) {
+            status = 'accepted';
+            message = 'Resposta correta';
+          } else {
+            status = 'wrong_answer';
+            message = 'Resposta incorreta - saída não corresponde ao esperado';
+          }
           break;
         case 4: // Wrong Answer
           status = 'wrong_answer';
@@ -170,7 +180,7 @@ export async function submitCode(
           break;
         case 6: // Compilation Error
           status = 'compilation_error';
-          message = 'Erro de compilação';
+          message = result.compile_output || result.stderr || 'Erro de compilação - verifique se o código está na linguagem correta';
           break;
         case 7:
         case 8:
@@ -182,7 +192,7 @@ export async function submitCode(
         case 14:
         case 15: // Runtime Error
           status = 'runtime_error';
-          message = 'Erro de execução';
+          message = result.stderr || result.compile_output || 'Erro de execução - verifique se o código está completo e correto';
           break;
       }
 
