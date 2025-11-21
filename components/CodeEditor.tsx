@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Editor from '@monaco-editor/react';
 import { Play, Send, RotateCcw, Settings } from 'lucide-react';
 import { toast } from 'react-hot-toast';

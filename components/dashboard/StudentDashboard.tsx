@@ -40,6 +40,7 @@ interface Assignment {
 interface Submission {
   _id: string;
   exercise: {
+    _id?: string;
     title: string;
   };
   status: string;
