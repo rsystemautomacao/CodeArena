@@ -397,7 +397,11 @@ export default function StudentDashboard() {
             ) : (
               <div className="space-y-3">
                 {recentSubmissions.slice(0, 5).map((submission) => (
-                  <div key={submission._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <Link
+                    key={submission._id}
+                    href={`/dashboard/submission/${submission._id}?exerciseId=${submission.exercise._id || ''}`}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                  >
                     <div>
                       <h3 className="font-medium text-gray-900">{submission.exercise.title}</h3>
                       <p className="text-sm text-gray-600">
@@ -409,7 +413,7 @@ export default function StudentDashboard() {
                         {getStatusText(submission.status)}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

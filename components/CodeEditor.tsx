@@ -34,6 +34,7 @@ export default function CodeEditor({
   onSubmit,
   readOnly = false
 }: CodeEditorProps) {
+  const router = useRouter();
   // Para alunos, sempre começar com template vazio (sem código funcional pré-preenchido)
   // Sempre usar apenas o template básico, ignorando qualquer código inicial fornecido
   const [code, setCode] = useState(LANGUAGE_TEMPLATES[language as keyof typeof LANGUAGE_TEMPLATES] || '');
@@ -55,9 +56,19 @@ export default function CodeEditor({
   };
 
   const handleLanguageChange = (newLanguage: string) => {
+    // Preservar código existente ao mudar linguagem
+    // Só usar template se o código atual for apenas o template da linguagem anterior
+    const currentTemplate = LANGUAGE_TEMPLATES[selectedLanguage as keyof typeof LANGUAGE_TEMPLATES];
+    const isOnlyTemplate = code.trim() === currentTemplate || code.trim().length < 10;
+    
     setSelectedLanguage(newLanguage);
-    // Sempre usar template básico quando mudar linguagem
-    setCode(LANGUAGE_TEMPLATES[newLanguage as keyof typeof LANGUAGE_TEMPLATES] || '');
+    
+    // Se o código atual é apenas template ou muito curto, usar novo template
+    // Caso contrário, preservar o código escrito pelo usuário
+    if (isOnlyTemplate) {
+      setCode(LANGUAGE_TEMPLATES[newLanguage as keyof typeof LANGUAGE_TEMPLATES] || '');
+    }
+    // Se não, mantém o código atual (não apaga)
   };
 
   const handleTestCode = async () => {
@@ -152,7 +163,7 @@ export default function CodeEditor({
         }
         
         // Redirecionar para página de resultados
-        window.location.href = redirectUrl;
+        router.push(redirectUrl);
       } else {
         // Fallback: mostrar mensagem de erro
         toast.error(data.error || data.message || 'Erro ao submeter código');

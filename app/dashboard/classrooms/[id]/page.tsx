@@ -157,7 +157,7 @@ export default function ClassroomDetailPage() {
         {/* Header */}
         <div className="mb-6">
           <Link
-            href={isStudent ? "/dashboard/classrooms" : "/dashboard/classrooms"}
+            href={isStudent ? "/dashboard/classrooms/student" : "/dashboard/classrooms"}
             className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
