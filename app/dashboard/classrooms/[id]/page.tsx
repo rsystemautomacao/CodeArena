@@ -61,6 +61,7 @@ export default function ClassroomDetailPage() {
       fetchClassroom();
       fetchAssignments();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchClassroom = async () => {

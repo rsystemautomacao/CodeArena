@@ -237,7 +237,7 @@ export default function ExercisesPage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }
