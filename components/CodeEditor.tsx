@@ -139,27 +139,23 @@ export default function CodeEditor({
         return;
       }
 
-      // Verificar se o status da submissão é aceito
-      if (data.success && data.status === 'accepted') {
-        toast.success('Código submetido com sucesso!');
-        onSubmit?.(code, selectedLanguage);
-      } else {
-        // Se não foi aceito, mostrar erro específico
-        let errorMessage = data.error || data.message || 'Erro ao submeter código';
+      // Sempre redirecionar para página de resultados (sucesso ou erro)
+      if (data.submissionId) {
+        // Buscar assignmentId da URL se existir
+        const urlParams = new URLSearchParams(window.location.search);
+        const assignmentId = urlParams.get('assignmentId');
         
-        // Se for erro de compilação, mostrar mensagem detalhada
-        if (data.status === 'compilation_error') {
-          errorMessage = `Erro de compilação: ${data.message || errorMessage}`;
-          if (data.testResults && data.testResults[0]?.output) {
-            errorMessage += `\n${data.testResults[0].output}`;
-          }
-        } else if (data.status === 'wrong_answer') {
-          errorMessage = `Resposta incorreta: ${data.message || errorMessage}`;
-        } else if (data.status === 'runtime_error') {
-          errorMessage = `Erro de execução: ${data.message || errorMessage}`;
+        // Construir URL de redirecionamento
+        let redirectUrl = `/dashboard/submission/${data.submissionId}?exerciseId=${exerciseId}`;
+        if (assignmentId) {
+          redirectUrl += `&assignmentId=${assignmentId}`;
         }
         
-        toast.error(errorMessage, { duration: 5000 });
+        // Redirecionar para página de resultados
+        window.location.href = redirectUrl;
+      } else {
+        // Fallback: mostrar mensagem de erro
+        toast.error(data.error || data.message || 'Erro ao submeter código');
       }
     } catch (error) {
       toast.error('Erro ao submeter código');
