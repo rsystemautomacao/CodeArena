@@ -30,9 +30,17 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
+    // Garantir que os modelos estão registrados
+    if (!mongoose.models.Exercise) {
+      await import('@/models/Exercise');
+    }
+    if (!mongoose.models.Submission) {
+      await import('@/models/Submission');
+    }
+
     // Buscar o exercício
     const exercise = await Exercise.findById(exerciseId);
-    if (!exercise) {
+    if (!exercise || !exercise.isActive) {
       return NextResponse.json(
         { error: 'Exercício não encontrado' },
         { status: 404 }
@@ -40,9 +48,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar submissão no banco
-    const userObjectId = new mongoose.Types.ObjectId(session.user.id);
-    const exerciseObjectId = new mongoose.Types.ObjectId(exerciseId);
-    const assignmentObjectId = assignmentId ? new mongoose.Types.ObjectId(assignmentId) : null;
+    let userObjectId: mongoose.Types.ObjectId;
+    let exerciseObjectId: mongoose.Types.ObjectId;
+    let assignmentObjectId: mongoose.Types.ObjectId | null = null;
+    
+    try {
+      userObjectId = new mongoose.Types.ObjectId(session.user.id);
+      exerciseObjectId = new mongoose.Types.ObjectId(exerciseId);
+      if (assignmentId) {
+        assignmentObjectId = new mongoose.Types.ObjectId(assignmentId);
+      }
+    } catch (e: any) {
+      console.error('Erro ao converter IDs:', e);
+      return NextResponse.json(
+        { error: 'ID inválido fornecido' },
+        { status: 400 }
+      );
+    }
     
     const submission = await Submission.create({
       user: userObjectId,
