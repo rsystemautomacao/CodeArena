@@ -477,12 +477,25 @@ export const authOptions: NextAuthOptions = {
         token.sub = user.id;
         token.role = user.role;
         token.name = user.name;
-        token.picture = user.image;
+        // CRÍTICO: Não armazenar base64 grande no token (evita REQUEST_HEADER_TOO_LARGE)
+        if (user.image) {
+          // Se for base64 e muito grande, não armazenar no token
+          if (user.image.startsWith('data:image') && user.image.length > 1024) {
+            console.log('⚠️ IGNORANDO BASE64 GRANDE NO TOKEN AO FAZER LOGIN');
+            token.picture = undefined; // Não armazenar base64 grande
+          } else {
+            token.picture = user.image;
+          }
+        } else {
+          token.picture = user.image;
+        }
         token.profileCompleted = user.profileCompleted;
         console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', { 
           sub: token.sub,
           role: user.role, 
           name: user.name, 
+          hasImage: !!token.picture,
+          imageLength: token.picture?.length || 0,
           profileCompleted: user.profileCompleted 
         });
       }
@@ -524,8 +537,37 @@ export const authOptions: NextAuthOptions = {
           console.log('✅ NOME ATUALIZADO NO TOKEN:', session.user.name);
         }
         if (session.user?.image) {
-          token.picture = session.user.image;
-          console.log('✅ IMAGEM ATUALIZADA NO TOKEN:', session.user.image);
+          // CRÍTICO: Não armazenar base64 no token (pode causar REQUEST_HEADER_TOO_LARGE)
+          // Se a imagem for base64 (data:image), buscar do banco e usar URL ou limitar tamanho
+          const imageValue = session.user.image;
+          
+          // Se for base64 e muito grande (> 1KB), não atualizar no token
+          if (imageValue.startsWith('data:image') && imageValue.length > 1024) {
+            console.log('⚠️ IMAGEM BASE64 MUITO GRANDE - NÃO ATUALIZANDO NO TOKEN (evitar REQUEST_HEADER_TOO_LARGE)');
+            // Buscar URL do banco em vez de usar base64
+            try {
+              await connectDB();
+              const dbUser = await User.findOne({ email: token.email }).select('avatar image');
+              if (dbUser && (dbUser.avatar || dbUser.image)) {
+                // Usar URL se existir, senão usar apenas uma referência pequena
+                const avatarUrl = dbUser.avatar || dbUser.image;
+                if (avatarUrl && !avatarUrl.startsWith('data:image')) {
+                  token.picture = avatarUrl;
+                  console.log('✅ URL DA IMAGEM ATUALIZADA NO TOKEN:', avatarUrl);
+                } else {
+                  // Se for base64, usar apenas um hash ou omitir
+                  token.picture = undefined; // Não armazenar base64 grande no token
+                  console.log('⚠️ IGNORANDO BASE64 GRANDE NO TOKEN');
+                }
+              }
+            } catch (e) {
+              console.error('Erro ao buscar avatar do banco:', e);
+            }
+          } else {
+            // Se não for base64 ou for pequeno, atualizar normalmente
+            token.picture = imageValue;
+            console.log('✅ IMAGEM ATUALIZADA NO TOKEN (URL ou pequena):', imageValue.substring(0, 100));
+          }
         }
       }
       
@@ -554,8 +596,32 @@ export const authOptions: NextAuthOptions = {
         if (token.name) {
           session.user.name = token.name as string;
         }
+        // CRÍTICO: Não passar base64 grande na sessão (evita REQUEST_HEADER_TOO_LARGE)
         if (token.picture) {
-          session.user.image = token.picture as string;
+          const pictureValue = token.picture as string;
+          // Se for base64 e muito grande, buscar URL do banco em vez disso
+          if (pictureValue.startsWith('data:image') && pictureValue.length > 1024) {
+            try {
+              await connectDB();
+              const dbUser = await User.findOne({ email: token.email }).select('avatar image');
+              if (dbUser) {
+                const avatarUrl = dbUser.avatar || dbUser.image;
+                // Se houver URL (não base64), usar ela
+                if (avatarUrl && !avatarUrl.startsWith('data:image')) {
+                  session.user.image = avatarUrl;
+                } else {
+                  // Se for base64, não passar na sessão para evitar header muito grande
+                  session.user.image = undefined;
+                  console.log('⚠️ BASE64 GRANDE DETECTADO - NÃO PASSANDO NA SESSÃO');
+                }
+              }
+            } catch (e) {
+              console.error('Erro ao buscar avatar do banco:', e);
+              session.user.image = undefined; // Não passar base64 grande
+            }
+          } else {
+            session.user.image = pictureValue;
+          }
         }
         
         // Atualizar profileCompleted do token se existir

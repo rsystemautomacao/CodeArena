@@ -205,10 +205,21 @@ export default function ProfilePage() {
       
       // Atualizar sessão do NextAuth com os novos dados
       try {
+        // CRÍTICO: Não enviar base64 grande no update (causa REQUEST_HEADER_TOO_LARGE)
+        const avatarUrl = updatedProfile.avatar || updatedProfile.image || session?.user?.image;
+        let imageToUpdate = avatarUrl;
+        
+        // Se for base64 e muito grande, usar apenas URL ou omitir
+        if (avatarUrl && avatarUrl.startsWith('data:image') && avatarUrl.length > 1024) {
+          console.log('⚠️ AVATAR É BASE64 GRANDE - USANDO APENAS REFERÊNCIA NA SESSÃO');
+          // Usar apenas uma URL de referência ou omitir
+          imageToUpdate = undefined; // Não atualizar com base64 grande
+        }
+        
         await update({
           user: {
             name: updatedProfile.name,
-            image: updatedProfile.avatar || updatedProfile.image || session?.user?.image
+            image: imageToUpdate // Apenas URL ou undefined, nunca base64 grande
           }
         });
         console.log('✅ SESSÃO ATUALIZADA COM SUCESSO');
