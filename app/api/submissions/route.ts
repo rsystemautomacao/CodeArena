@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { submitCode } from '@/lib/judge0';
+import { validateLanguageMatch, validateBasicSyntax } from '@/lib/validate-language';
 import connectDB from '@/lib/mongodb';
 import mongoose from 'mongoose';
 
@@ -44,6 +45,33 @@ export async function POST(request: NextRequest) {
     if (!template || trimmedCode === template || trimmedCode.length < 10) {
       return NextResponse.json(
         { error: 'Por favor, escreva um código válido antes de submeter. O código não pode estar vazio ou apenas com comentários.' },
+        { status: 400 }
+      );
+    }
+
+    // CRÍTICO: Validar que o código corresponde à linguagem selecionada
+    const languageValidation = validateLanguageMatch(code, language);
+    if (!languageValidation.isValid) {
+      console.error('❌ VALIDAÇÃO DE LINGUAGEM FALHOU:', {
+        selectedLanguage: language,
+        codePreview: code.substring(0, 100),
+        error: languageValidation.error
+      });
+      return NextResponse.json(
+        { error: languageValidation.error || 'O código não corresponde à linguagem selecionada. Por favor, selecione a linguagem correta ou corrija o código.' },
+        { status: 400 }
+      );
+    }
+
+    // Validar sintaxe básica
+    const syntaxValidation = validateBasicSyntax(code, language);
+    if (!syntaxValidation.isValid) {
+      console.error('❌ VALIDAÇÃO DE SINTAXE FALHOU:', {
+        language,
+        error: syntaxValidation.error
+      });
+      return NextResponse.json(
+        { error: syntaxValidation.error || 'Código com sintaxe inválida' },
         { status: 400 }
       );
     }
@@ -158,9 +186,18 @@ export async function POST(request: NextRequest) {
     let finalMessage = 'Resposta correta';
     let passedTests = 0;
     let totalTests = result.results.length;
+    let hasCompilationError = false;
 
     // Verificar se TODOS os testes passaram
     for (const testResult of result.results) {
+      // Se houver erro de compilação em QUALQUER teste, rejeitar imediatamente
+      if (testResult.status === 'compilation_error') {
+        hasCompilationError = true;
+        finalStatus = 'compilation_error';
+        finalMessage = testResult.message || 'Erro de compilação - verifique se o código está na linguagem correta';
+        break;
+      }
+      
       if (testResult.status === 'accepted') {
         passedTests++;
       } else {
@@ -174,11 +211,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Se nem todos os testes passaram, a submissão é rejeitada
-    if (passedTests < totalTests) {
-      finalStatus = 'wrong_answer';
-      if (finalMessage === 'Resposta correta') {
-        finalMessage = `Apenas ${passedTests} de ${totalTests} testes passaram`;
+    // Se nem todos os testes passaram ou há erro de compilação, a submissão é rejeitada
+    if (hasCompilationError || passedTests < totalTests) {
+      if (!hasCompilationError) {
+        finalStatus = 'wrong_answer';
+        if (finalMessage === 'Resposta correta') {
+          finalMessage = `Apenas ${passedTests} de ${totalTests} testes passaram`;
+        }
       }
     }
 

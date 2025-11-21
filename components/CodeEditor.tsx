@@ -161,7 +161,8 @@ export default function CodeEditor({
             value={selectedLanguage}
             onChange={(e) => handleLanguageChange(e.target.value)}
             disabled={readOnly}
-            className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            style={{ color: '#111827' }}
           >
             <option value="python">Python</option>
             <option value="java">Java</option>
