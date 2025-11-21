@@ -154,24 +154,8 @@ export default function SubmissionsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <Link 
-                href="/dashboard"
-                className="flex items-center text-gray-600 hover:text-gray-900 mr-4"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Voltar
-              </Link>
-              <h1 className="text-2xl font-bold text-primary-500">Minhas Submissões</h1>
-            </div>
-          </div>
-        </div>
-      </header>
-
+      <DashboardHeader title="Minhas Submissões" />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
