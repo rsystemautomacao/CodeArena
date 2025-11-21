@@ -34,8 +34,9 @@ export default function CodeEditor({
   onSubmit,
   readOnly = false
 }: CodeEditorProps) {
-  // Para alunos, sempre começar com template vazio
-  const [code, setCode] = useState(initialCode || LANGUAGE_TEMPLATES[language as keyof typeof LANGUAGE_TEMPLATES] || '');
+  // Para alunos, sempre começar com template vazio (sem código funcional pré-preenchido)
+  // Sempre usar apenas o template básico, ignorando qualquer código inicial fornecido
+  const [code, setCode] = useState(LANGUAGE_TEMPLATES[language as keyof typeof LANGUAGE_TEMPLATES] || '');
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [testInput, setTestInput] = useState('');
   const [testOutput, setTestOutput] = useState('');

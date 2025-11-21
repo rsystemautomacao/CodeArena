@@ -300,7 +300,7 @@ export default function ExercisePage() {
               <CodeEditor
                 exerciseId={exercise._id}
                 language="python"
-                initialCode=""
+                initialCode={undefined}
                 onSubmit={handleCodeSubmit}
               />
             </div>

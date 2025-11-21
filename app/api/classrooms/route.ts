@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
-import Classroom from '@/models/Classroom';
-import User from '@/models/User';
 import mongoose from 'mongoose';
+
+// Importar modelos para garantir que estejam registrados
+import '@/models/User';
+import '@/models/Classroom';
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,34 +84,86 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    if (!session || !session.user) {
       return NextResponse.json(
         { error: 'Não autorizado' },
         { status: 401 }
       );
     }
 
-    await connectDB();
+    if (!session.user.id) {
+      console.error('Session user ID não encontrado:', session.user);
+      return NextResponse.json(
+        { error: 'ID do usuário não encontrado na sessão' },
+        { status: 400 }
+      );
+    }
+
+    const dbConnection = await connectDB();
+    if (!dbConnection) {
+      console.error('Erro: Não foi possível conectar ao banco de dados');
+      return NextResponse.json(
+        { error: 'Erro ao conectar com o banco de dados' },
+        { status: 500 }
+      );
+    }
+
+    // Garantir que os modelos estão registrados
+    const Classroom = (await import('@/models/Classroom')).default;
+
+    if (!Classroom) {
+      console.error('Erro: Modelo Classroom não encontrado');
+      return NextResponse.json(
+        { error: 'Erro ao carregar modelo do banco de dados' },
+        { status: 500 }
+      );
+    }
 
     let classrooms;
 
     if (session.user.role === 'professor') {
       // Professores veem suas próprias turmas
-      classrooms = await Classroom.find({ 
-        professor: session.user.id,
-        isActive: true 
-      })
-      .populate('students', 'name email')
-      .sort({ createdAt: -1 });
+      try {
+        classrooms = await Classroom.find({ 
+          professor: session.user.id,
+          isActive: true 
+        })
+        .populate('students', 'name email')
+        .sort({ createdAt: -1 });
+      } catch (e: any) {
+        console.error('Erro ao buscar turmas do professor:', e);
+        return NextResponse.json(
+          { error: 'Erro ao buscar turmas' },
+          { status: 500 }
+        );
+      }
     } else if (session.user.role === 'aluno') {
       // Alunos veem turmas em que estão matriculados
-      const studentObjectId = new mongoose.Types.ObjectId(session.user.id);
-      classrooms = await Classroom.find({ 
-        students: studentObjectId,
-        isActive: true 
-      })
-      .populate('professor', 'name email')
-      .sort({ createdAt: -1 });
+      let studentObjectId: mongoose.Types.ObjectId;
+      try {
+        studentObjectId = new mongoose.Types.ObjectId(session.user.id);
+      } catch (e: any) {
+        console.error('Erro ao converter ID do aluno:', e);
+        return NextResponse.json(
+          { error: 'ID do aluno inválido' },
+          { status: 400 }
+        );
+      }
+
+      try {
+        classrooms = await Classroom.find({ 
+          students: studentObjectId,
+          isActive: true 
+        })
+        .populate('professor', 'name email')
+        .sort({ createdAt: -1 });
+      } catch (e: any) {
+        console.error('Erro ao buscar turmas do aluno:', e);
+        return NextResponse.json(
+          { error: 'Erro ao buscar turmas' },
+          { status: 500 }
+        );
+      }
     } else {
       return NextResponse.json(
         { error: 'Acesso negado' },
@@ -117,7 +171,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ classrooms });
+    return NextResponse.json({ classrooms: classrooms || [] });
   } catch (error: any) {
     console.error('Erro ao buscar turmas:', error);
     console.error('Stack trace:', error?.stack);

@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
-import Assignment from '@/models/Assignment';
-import Classroom from '@/models/Classroom';
-import Exercise from '@/models/Exercise';
 import mongoose from 'mongoose';
+
+// Importar modelos para garantir que estejam registrados
+import '@/models/User';
+import '@/models/Classroom';
+import '@/models/Exercise';
+import '@/models/Assignment';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,6 +64,11 @@ export async function POST(request: NextRequest) {
     }
 
     await connectDB();
+
+    // Garantir que os modelos estão registrados
+    const Classroom = (await import('@/models/Classroom')).default;
+    const Exercise = (await import('@/models/Exercise')).default;
+    const Assignment = (await import('@/models/Assignment')).default;
 
     const classroom = await Classroom.findOne({
       _id: classroomId,
@@ -129,38 +137,98 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    if (!session || !session.user) {
       return NextResponse.json(
         { error: 'Não autorizado' },
         { status: 401 }
       );
     }
 
+    if (!session.user.id) {
+      console.error('Session user ID não encontrado:', session.user);
+      return NextResponse.json(
+        { error: 'ID do usuário não encontrado na sessão' },
+        { status: 400 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const classroomId = searchParams.get('classroomId');
 
-    await connectDB();
+    const dbConnection = await connectDB();
+    if (!dbConnection) {
+      console.error('Erro: Não foi possível conectar ao banco de dados');
+      return NextResponse.json(
+        { error: 'Erro ao conectar com o banco de dados' },
+        { status: 500 }
+      );
+    }
+
+    // Garantir que os modelos estão registrados
+    const Classroom = (await import('@/models/Classroom')).default;
+    const Assignment = (await import('@/models/Assignment')).default;
+
+    if (!Classroom || !Assignment) {
+      console.error('Erro: Modelos não encontrados');
+      return NextResponse.json(
+        { error: 'Erro ao carregar modelos do banco de dados' },
+        { status: 500 }
+      );
+    }
 
     let assignmentsQuery: any = { isActive: true };
 
     if (session.user.role === 'professor') {
       assignmentsQuery.createdBy = session.user.id;
       if (classroomId) {
-        assignmentsQuery.classroom = classroomId;
+        try {
+          assignmentsQuery.classroom = new mongoose.Types.ObjectId(classroomId);
+        } catch (e: any) {
+          console.error('Erro ao converter classroomId:', e);
+          return NextResponse.json(
+            { error: 'ID da turma inválido' },
+            { status: 400 }
+          );
+        }
       }
     } else if (session.user.role === 'aluno') {
-      const studentObjectId = new mongoose.Types.ObjectId(session.user.id);
-      const classrooms = await Classroom.find({
-        students: studentObjectId,
-        isActive: true,
-      }).select('_id');
+      let studentObjectId: mongoose.Types.ObjectId;
+      try {
+        studentObjectId = new mongoose.Types.ObjectId(session.user.id);
+      } catch (e: any) {
+        console.error('Erro ao converter ID do aluno:', e);
+        return NextResponse.json(
+          { error: 'ID do aluno inválido' },
+          { status: 400 }
+        );
+      }
 
-      const classroomIds = classrooms.map((item) => item._id);
+      try {
+        const classrooms = await Classroom.find({
+          students: studentObjectId,
+          isActive: true,
+        }).select('_id');
 
-      assignmentsQuery.classroom = { $in: classroomIds };
+        const classroomIds = classrooms.map((item) => item._id);
 
-      if (classroomId && classroomIds.find((id) => id.toString() === classroomId)) {
-        assignmentsQuery.classroom = classroomId;
+        if (classroomIds.length === 0) {
+          return NextResponse.json({ assignments: [] });
+        }
+
+        assignmentsQuery.classroom = { $in: classroomIds };
+
+        if (classroomId) {
+          const foundClassroom = classroomIds.find((id) => id.toString() === classroomId);
+          if (foundClassroom) {
+            assignmentsQuery.classroom = foundClassroom;
+          }
+        }
+      } catch (e: any) {
+        console.error('Erro ao buscar turmas do aluno:', e);
+        return NextResponse.json(
+          { error: 'Erro ao buscar turmas' },
+          { status: 500 }
+        );
       }
     } else {
       return NextResponse.json(
@@ -169,12 +237,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const assignments = await Assignment.find(assignmentsQuery)
-      .populate('classroom', 'name inviteCode')
-      .populate('exercises', 'title difficulty tags')
-      .sort({ startDate: 1 });
+    try {
+      const assignments = await Assignment.find(assignmentsQuery)
+        .populate('classroom', 'name inviteCode')
+        .populate('exercises', 'title difficulty tags')
+        .sort({ startDate: 1 });
 
-    return NextResponse.json({ assignments });
+      return NextResponse.json({ assignments: assignments || [] });
+    } catch (e: any) {
+      console.error('Erro ao buscar atividades:', e);
+      return NextResponse.json(
+        { error: 'Erro ao buscar atividades' },
+        { status: 500 }
+      );
+    }
   } catch (error: any) {
     console.error('Erro ao listar atividades:', error);
     console.error('Stack trace:', error?.stack);
