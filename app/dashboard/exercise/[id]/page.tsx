@@ -291,8 +291,8 @@ export default function ExercisePage() {
             <div className="mb-6">
               <CodeEditor
                 exerciseId={exercise._id}
-                language="python"
-                initialCode={undefined}
+                language={languageFromUrl || "python"}
+                initialCode={codeFromUrl ? decodeURIComponent(codeFromUrl) : undefined}
                 onSubmit={handleCodeSubmit}
               />
             </div>
