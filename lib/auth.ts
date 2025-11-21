@@ -583,14 +583,62 @@ export const authOptions: NextAuthOptions = {
       console.log('📋 SESSION CALLBACK:', { 
         tokenRole: token.role,
         tokenName: token.name,
+        tokenSub: token.sub,
         sessionUserRole: session.user?.role,
         sessionUserEmail: session.user?.email,
         sessionUserName: session.user?.name
       });
       
       if (token) {
-        session.user.id = token.sub!;
-        session.user.role = token.role as string;
+        // CRÍTICO: Garantir que session.user.id sempre existe
+        // Se token.sub não existir, buscar do banco usando email
+        if (token.sub) {
+          session.user.id = token.sub;
+          console.log('✅ SESSION USER ID DO TOKEN:', token.sub);
+        } else if (token.email) {
+          // Fallback: buscar ID do banco usando email
+          try {
+            await connectDB();
+            const User = (await import('@/models/User')).default;
+            if (User) {
+              const dbUser = await User.findOne({ email: token.email }).select('_id');
+              if (dbUser) {
+                session.user.id = dbUser._id.toString();
+                // Atualizar token.sub para próxima vez
+                token.sub = dbUser._id.toString();
+                console.log('✅ SESSION USER ID BUSCADO DO BANCO:', session.user.id);
+              } else {
+                console.error('❌ USUÁRIO NÃO ENCONTRADO NO BANCO:', token.email);
+                // Não retornar erro aqui, apenas logar
+              }
+            }
+          } catch (error) {
+            console.error('❌ ERRO AO BUSCAR USER ID DO BANCO:', error);
+            // Não retornar erro aqui, apenas logar
+          }
+        }
+        
+        // Garantir que role sempre existe
+        if (token.role) {
+          session.user.role = token.role as string;
+        } else {
+          // Fallback: buscar role do banco
+          try {
+            await connectDB();
+            const User = (await import('@/models/User')).default;
+            if (User && token.email) {
+              const dbUser = await User.findOne({ email: token.email }).select('role');
+              if (dbUser) {
+                session.user.role = dbUser.role || 'aluno';
+                token.role = dbUser.role || 'aluno';
+                console.log('✅ SESSION ROLE BUSCADO DO BANCO:', session.user.role);
+              }
+            }
+          } catch (error) {
+            console.error('❌ ERRO AO BUSCAR ROLE DO BANCO:', error);
+            session.user.role = 'aluno'; // Fallback padrão
+          }
+        }
         
         // Atualizar nome e imagem do token se existirem
         if (token.name) {
