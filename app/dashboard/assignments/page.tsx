@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { Loader2, Clock, Pencil, Trash2, Plus, Users } from 'lucide-react';
+import { Loader2, Clock, Pencil, Trash2, Plus, Users, Lock } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
 
 type AssignmentRow = {
@@ -221,6 +221,15 @@ export default function AssignmentsPage() {
                     </div>
                     {!isStudent && (
                       <div className="ml-4 flex items-center space-x-2">
+                        {assignment.type === 'prova' && (
+                          <Link
+                            href={`/dashboard/assignments/${assignment._id}/access-control`}
+                            className="rounded-md border border-blue-200 p-2 text-blue-600 transition hover:bg-blue-50 hover:text-blue-700"
+                            title="Controle de Acesso"
+                          >
+                            <Lock className="h-4 w-4" />
+                          </Link>
+                        )}
                         <Link
                           href={`/dashboard/assignments/${assignment._id}/edit`}
                           className="rounded-md border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"

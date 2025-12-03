@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { submitCode } from '@/lib/judge0';
 import { validateLanguageMatch, validateBasicSyntax } from '@/lib/validate-language';
+import { validateLabIP } from '@/lib/ip-validation';
+import { checkSessionValid } from '@/lib/validate-session';
 import connectDB from '@/lib/mongodb';
 import mongoose from 'mongoose';
 
@@ -10,6 +12,7 @@ import mongoose from 'mongoose';
 import '@/models/User';
 import '@/models/Exercise';
 import '@/models/Submission';
+import '@/models/Assignment';
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,6 +84,7 @@ export async function POST(request: NextRequest) {
     // Garantir que os modelos estão registrados
     const Exercise = (await import('@/models/Exercise')).default;
     const Submission = (await import('@/models/Submission')).default;
+    const Assignment = (await import('@/models/Assignment')).default;
 
     // Buscar o exercício
     const exercise = await Exercise.findById(exerciseId);
@@ -89,6 +93,78 @@ export async function POST(request: NextRequest) {
         { error: 'Exercício não encontrado' },
         { status: 404 }
       );
+    }
+
+    // VALIDAÇÃO DE ACESSO PARA PROVAS
+    if (assignmentId) {
+      const assignment = await Assignment.findById(assignmentId);
+      
+      if (assignment && assignment.type === 'prova') {
+        // VALIDAÇÃO DE SESSÃO ÚNICA: Verificar se a sessão do aluno está ativa
+        if (session.user.role === 'aluno') {
+          const sessionValid = await checkSessionValid(session.user.id);
+          if (!sessionValid) {
+            return NextResponse.json(
+              { 
+                error: 'Sua sessão foi invalidada. Outro login foi detectado. Faça login novamente.',
+                sessionExpired: true
+              },
+              { status: 401 }
+            );
+          }
+        }
+        
+        const userObjectId = new mongoose.Types.ObjectId(session.user.id);
+        
+        // Verificar se o aluno está habilitado (se houver lista de alunos habilitados)
+        if (assignment.enabledStudents && assignment.enabledStudents.length > 0) {
+          const isEnabled = assignment.enabledStudents.some(
+            (enabledId: mongoose.Types.ObjectId) => enabledId.toString() === userObjectId.toString()
+          );
+          
+          if (!isEnabled) {
+            return NextResponse.json(
+              { 
+                error: 'Você não está habilitado para realizar esta prova. Entre em contato com o professor.',
+                accessDenied: true,
+                reason: 'not_enabled'
+              },
+              { status: 403 }
+            );
+          }
+        }
+        
+        // Verificar IP do laboratório (se configurado)
+        if (assignment.requireLabIP && assignment.allowedIPRanges && assignment.allowedIPRanges.length > 0) {
+          const ipValidation = validateLabIP(request, assignment.allowedIPRanges);
+          
+          if (!ipValidation.isValid) {
+            console.log('🚫 ACESSO NEGADO POR IP:', {
+              clientIP: ipValidation.clientIP,
+              reason: ipValidation.reason,
+              allowedRanges: assignment.allowedIPRanges,
+              userId: session.user.id,
+              assignmentId: assignmentId
+            });
+            
+            return NextResponse.json(
+              { 
+                error: `Acesso negado: ${ipValidation.reason}. Esta prova só pode ser realizada na rede do laboratório de informática.`,
+                accessDenied: true,
+                reason: 'ip_not_allowed',
+                clientIP: ipValidation.clientIP
+              },
+              { status: 403 }
+            );
+          }
+          
+          console.log('✅ ACESSO PERMITIDO POR IP:', {
+            clientIP: ipValidation.clientIP,
+            userId: session.user.id,
+            assignmentId: assignmentId
+          });
+        }
+      }
     }
 
     // Criar submissão no banco

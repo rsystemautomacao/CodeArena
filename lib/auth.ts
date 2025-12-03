@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import connectDB from './mongodb';
 import User from '@/models/User';
+import { invalidateUserSessions } from './session-manager';
 
 // Debug das variáveis de ambiente
 console.log('🔍 DEBUG AUTH CONFIG:');
@@ -490,6 +491,27 @@ export const authOptions: NextAuthOptions = {
           token.picture = user.image;
         }
         token.profileCompleted = user.profileCompleted;
+        
+        // CONTROLE DE SESSÃO ÚNICA: Se for aluno, invalidar sessões anteriores
+        if (user.role === 'aluno' && user.id) {
+          try {
+            // Gerar um token único para esta sessão (usando timestamp + user ID)
+            const sessionToken = `${user.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+            token.sessionToken = sessionToken;
+            
+            // Invalidar todas as sessões anteriores do aluno
+            const invalidatedCount = await invalidateUserSessions(user.id);
+            console.log(`🔒 Sessões anteriores invalidadas para aluno ${user.id}: ${invalidatedCount}`);
+            
+            // Nota: A criação da sessão com IP será feita via API /api/session/register
+            // após o login, pois não temos acesso ao request aqui
+            console.log(`✅ Nova sessão preparada para aluno ${user.id}`);
+          } catch (error) {
+            console.error('❌ Erro ao gerenciar sessão do aluno:', error);
+            // Não bloquear login em caso de erro
+          }
+        }
+        
         console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', { 
           sub: token.sub,
           role: user.role, 

@@ -16,6 +16,16 @@ export default function Dashboard() {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     } else if (status === 'authenticated' && session?.user) {
+      // Registrar sessão para alunos (controle de sessão única)
+      if (session.user.role === 'aluno') {
+        fetch('/api/session/register', {
+          method: 'POST',
+        }).catch(error => {
+          console.error('Erro ao registrar sessão:', error);
+          // Não bloquear acesso em caso de erro
+        });
+      }
+      
       // Verificar se é aluno e se o perfil não foi completado
       if (session.user.role === 'aluno' && !session.user.profileCompleted) {
         // Verificar no banco de dados se realmente não completou

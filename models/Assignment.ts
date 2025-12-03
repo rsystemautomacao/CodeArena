@@ -12,6 +12,10 @@ export interface IAssignment extends Document {
   timeLimit?: number; // em minutos, para provas
   isActive: boolean;
   createdBy: mongoose.Types.ObjectId;
+  // Controle de acesso para provas
+  enabledStudents?: mongoose.Types.ObjectId[]; // Alunos habilitados manualmente pelo professor
+  requireLabIP?: boolean; // Se true, valida se o IP está na rede do laboratório
+  allowedIPRanges?: string[]; // Faixas de IP permitidas (ex: ["192.168.1.0/24", "10.0.0.0/16"])
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +65,19 @@ const AssignmentSchema = new Schema<IAssignment>({
     ref: 'User',
     required: [true, 'Criador é obrigatório'],
   },
+  // Controle de acesso para provas
+  enabledStudents: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+  requireLabIP: {
+    type: Boolean,
+    default: false,
+  },
+  allowedIPRanges: [{
+    type: String,
+    trim: true,
+  }],
 }, {
   timestamps: true,
 });

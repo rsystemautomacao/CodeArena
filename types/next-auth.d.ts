@@ -22,5 +22,6 @@ declare module 'next-auth/jwt' {
   interface JWT {
     role: string;
     profileCompleted?: boolean;
+    sessionToken?: string; // Token único da sessão
   }
 }
