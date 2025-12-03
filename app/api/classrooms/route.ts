@@ -69,10 +69,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Converter ID do professor para ObjectId
+    let professorObjectId: mongoose.Types.ObjectId;
+    try {
+      professorObjectId = new mongoose.Types.ObjectId(session.user.id);
+    } catch (e: any) {
+      console.error('Erro ao converter ID do professor:', e);
+      return NextResponse.json(
+        { error: 'ID do professor inválido' },
+        { status: 400 }
+      );
+    }
+
     const classroom = await Classroom.create({
       name,
       description,
-      professor: session.user.id,
+      professor: professorObjectId,
       students: [],
       inviteCode: inviteCode!,
       isActive: true,
@@ -142,8 +154,19 @@ export async function GET(request: NextRequest) {
     if (session.user.role === 'professor') {
       // Professores veem suas próprias turmas
       try {
+        let professorObjectId: mongoose.Types.ObjectId;
+        try {
+          professorObjectId = new mongoose.Types.ObjectId(session.user.id);
+        } catch (e: any) {
+          console.error('Erro ao converter ID do professor:', e);
+          return NextResponse.json(
+            { error: 'ID do professor inválido' },
+            { status: 400 }
+          );
+        }
+        
         classrooms = await Classroom.find({ 
-          professor: session.user.id,
+          professor: professorObjectId,
           isActive: true 
         })
         .populate('students', 'name email')
