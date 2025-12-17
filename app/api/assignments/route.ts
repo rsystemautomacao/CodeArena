@@ -251,16 +251,28 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+      console.log('🔍 GET ASSIGNMENTS: Query:', JSON.stringify(assignmentsQuery));
       const assignments = await Assignment.find(assignmentsQuery)
         .populate('classroom', 'name inviteCode')
         .populate('exercises', 'title difficulty tags')
-        .sort({ startDate: 1 });
-
+        .sort({ startDate: 1 })
+        .lean();
+      
+      console.log('✅ GET ASSIGNMENTS: Atividades encontradas:', assignments?.length || 0);
       return NextResponse.json({ assignments: assignments || [] });
     } catch (e: any) {
-      console.error('Erro ao buscar atividades:', e);
+      console.error('❌ GET ASSIGNMENTS: Erro ao buscar atividades:', e);
+      console.error('❌ GET ASSIGNMENTS: Stack trace:', e?.stack);
+      console.error('❌ GET ASSIGNMENTS: Error details:', {
+        message: e?.message,
+        name: e?.name,
+        code: e?.code,
+      });
       return NextResponse.json(
-        { error: 'Erro ao buscar atividades' },
+        { 
+          error: 'Erro ao buscar atividades',
+          debug: process.env.NODE_ENV === 'development' ? e?.message : undefined
+        },
         { status: 500 }
       );
     }

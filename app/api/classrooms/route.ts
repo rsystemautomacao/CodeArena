@@ -171,23 +171,33 @@ export async function GET(request: NextRequest) {
         try {
           professorObjectId = new mongoose.Types.ObjectId(session.user.id);
         } catch (e: any) {
-          console.error('Erro ao converter ID do professor:', e);
+          console.error('❌ GET CLASSROOMS: Erro ao converter ID do professor:', e);
           return NextResponse.json(
             { error: 'ID do professor inválido' },
             { status: 400 }
           );
         }
         
+        console.log('🔍 GET CLASSROOMS: Buscando turmas do professor:', professorObjectId.toString());
         classrooms = await Classroom.find({ 
           professor: professorObjectId,
           isActive: true 
         })
         .populate('students', 'name email')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
+        
+        console.log('✅ GET CLASSROOMS: Turmas encontradas:', classrooms?.length || 0);
       } catch (e: any) {
-        console.error('Erro ao buscar turmas do professor:', e);
+        console.error('❌ GET CLASSROOMS: Erro ao buscar turmas do professor:', e);
+        console.error('❌ GET CLASSROOMS: Stack trace:', e?.stack);
+        console.error('❌ GET CLASSROOMS: Error details:', {
+          message: e?.message,
+          name: e?.name,
+          code: e?.code,
+        });
         return NextResponse.json(
-          { error: 'Erro ao buscar turmas' },
+          { error: 'Erro ao buscar turmas', debug: process.env.NODE_ENV === 'development' ? e?.message : undefined },
           { status: 500 }
         );
       }
