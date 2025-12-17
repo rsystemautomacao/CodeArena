@@ -206,8 +206,9 @@ export async function GET(request: NextRequest) {
       let studentObjectId: mongoose.Types.ObjectId;
       try {
         studentObjectId = new mongoose.Types.ObjectId(session.user.id);
+        console.log('🔍 GET CLASSROOMS: ID do aluno convertido:', studentObjectId.toString());
       } catch (e: any) {
-        console.error('Erro ao converter ID do aluno:', e);
+        console.error('❌ GET CLASSROOMS: Erro ao converter ID do aluno:', e);
         return NextResponse.json(
           { error: 'ID do aluno inválido' },
           { status: 400 }
@@ -215,16 +216,29 @@ export async function GET(request: NextRequest) {
       }
 
       try {
+        console.log('🔍 GET CLASSROOMS: Buscando turmas do aluno:', studentObjectId.toString());
         classrooms = await Classroom.find({ 
           students: studentObjectId,
           isActive: true 
         })
         .populate('professor', 'name email')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
+        
+        console.log('✅ GET CLASSROOMS: Turmas do aluno encontradas:', classrooms?.length || 0);
       } catch (e: any) {
-        console.error('Erro ao buscar turmas do aluno:', e);
+        console.error('❌ GET CLASSROOMS: Erro ao buscar turmas do aluno:', e);
+        console.error('❌ GET CLASSROOMS: Stack trace:', e?.stack);
+        console.error('❌ GET CLASSROOMS: Error details:', {
+          message: e?.message,
+          name: e?.name,
+          code: e?.code,
+        });
         return NextResponse.json(
-          { error: 'Erro ao buscar turmas' },
+          { 
+            error: 'Erro ao buscar turmas',
+            debug: process.env.NODE_ENV === 'development' ? e?.message : undefined
+          },
           { status: 500 }
         );
       }
