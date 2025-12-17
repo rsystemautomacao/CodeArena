@@ -48,8 +48,11 @@ export default function TeacherDashboard() {
   const recentClassrooms = classrooms.slice(0, 3);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    // Aguardar sessão estar disponível antes de buscar dados
+    if (session?.user) {
+      fetchData();
+    }
+  }, [session]);
 
   const fetchData = async () => {
     try {

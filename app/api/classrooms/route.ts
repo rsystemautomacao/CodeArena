@@ -114,7 +114,16 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
+    console.log('🔍 GET CLASSROOMS - Sessão recebida:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userRole: session?.user?.role
+    });
+
     if (!session || !session.user) {
+      console.error('❌ GET CLASSROOMS: Sessão não encontrada');
       return NextResponse.json(
         { error: 'Não autorizado' },
         { status: 401 }
@@ -122,7 +131,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (!session.user.id) {
-      console.error('Session user ID não encontrado:', session.user);
+      console.error('❌ GET CLASSROOMS: Session user ID não encontrado:', {
+        sessionUser: session.user,
+        sessionUserEmail: session.user.email,
+        sessionUserRole: session.user.role
+      });
       return NextResponse.json(
         { error: 'ID do usuário não encontrado na sessão' },
         { status: 400 }

@@ -75,10 +75,27 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    console.log('🔍 GET EXERCISES - Sessão recebida:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userRole: session?.user?.role
+    });
+
+    if (!session || !session.user) {
+      console.error('❌ GET EXERCISES: Sessão não encontrada');
       return NextResponse.json(
         { error: 'Não autorizado' },
         { status: 401 }
+      );
+    }
+
+    if (session.user.role === 'professor' && !session.user.id) {
+      console.error('❌ GET EXERCISES: Session user ID não encontrado para professor');
+      return NextResponse.json(
+        { error: 'ID do usuário não encontrado na sessão' },
+        { status: 400 }
       );
     }
 

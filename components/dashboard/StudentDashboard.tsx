@@ -61,8 +61,11 @@ export default function StudentDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    // Aguardar sessão estar disponível antes de buscar dados
+    if (session?.user) {
+      fetchData();
+    }
+  }, [session]);
 
   const fetchData = async () => {
     try {
