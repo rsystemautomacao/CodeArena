@@ -217,29 +217,39 @@ export async function GET(request: NextRequest) {
       }
 
       try {
+        console.log('🔍 GET ASSIGNMENTS: Buscando turmas do aluno:', studentObjectId.toString());
         const classrooms = await Classroom.find({
           students: studentObjectId,
           isActive: true,
-        }).select('_id');
+        })
+        .select('_id')
+        .lean();
 
-        const classroomIds = classrooms.map((item) => item._id);
+        const classroomIds = classrooms.map((item) => item._id.toString());
+
+        console.log('✅ GET ASSIGNMENTS: Turmas do aluno encontradas:', classroomIds.length);
 
         if (classroomIds.length === 0) {
+          console.log('ℹ️ GET ASSIGNMENTS: Aluno não está em nenhuma turma');
           return NextResponse.json({ assignments: [] });
         }
 
         assignmentsQuery.classroom = { $in: classroomIds };
 
         if (classroomId) {
-          const foundClassroom = classroomIds.find((id) => id.toString() === classroomId);
+          const foundClassroom = classroomIds.find((id) => id === classroomId);
           if (foundClassroom) {
             assignmentsQuery.classroom = foundClassroom;
           }
         }
       } catch (e: any) {
-        console.error('Erro ao buscar turmas do aluno:', e);
+        console.error('❌ GET ASSIGNMENTS: Erro ao buscar turmas do aluno:', e);
+        console.error('❌ GET ASSIGNMENTS: Stack trace:', e?.stack);
         return NextResponse.json(
-          { error: 'Erro ao buscar turmas' },
+          { 
+            error: 'Erro ao buscar turmas do aluno',
+            debug: process.env.NODE_ENV === 'development' ? e?.message : undefined
+          },
           { status: 500 }
         );
       }
