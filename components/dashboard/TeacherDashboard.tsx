@@ -55,37 +55,59 @@ export default function TeacherDashboard() {
   }, [session]);
 
   const fetchData = async () => {
+    // Verificar novamente se a sessão está disponível antes de fazer fetch
+    if (!session?.user?.id) {
+      console.error('❌ TeacherDashboard: Tentativa de fetch sem session.user.id');
+      return;
+    }
+
     try {
       setIsLoading(true);
+      console.log('🔍 TeacherDashboard: Iniciando busca de dados...');
 
       const [classroomRes, assignmentRes, exercisesRes] = await Promise.all([
-        fetch('/api/classrooms', { cache: 'no-store' }),
-        fetch('/api/assignments', { cache: 'no-store' }),
-        fetch('/api/exercises?limit=1', { cache: 'no-store' }),
+        fetch('/api/classrooms', { cache: 'no-store', credentials: 'include' }),
+        fetch('/api/assignments', { cache: 'no-store', credentials: 'include' }),
+        fetch('/api/exercises?limit=1', { cache: 'no-store', credentials: 'include' }),
       ]);
+
+      console.log('📊 TeacherDashboard: Respostas recebidas:', {
+        classrooms: classroomRes.status,
+        assignments: assignmentRes.status,
+        exercises: exercisesRes.status
+      });
 
       if (classroomRes.ok) {
         const classroomData = await classroomRes.json();
         setClassrooms(classroomData.classrooms || []);
+        console.log('✅ TeacherDashboard: Turmas carregadas:', classroomData.classrooms?.length || 0);
       } else {
         const payload = await classroomRes.json().catch(() => null);
+        console.error('❌ TeacherDashboard: Erro ao carregar turmas:', payload);
         toast.error(payload?.error || 'Erro ao carregar turmas');
       }
 
       if (assignmentRes.ok) {
         const assignmentData = await assignmentRes.json();
         setAssignments(assignmentData.assignments || []);
+        console.log('✅ TeacherDashboard: Atividades carregadas:', assignmentData.assignments?.length || 0);
       } else {
         const payload = await assignmentRes.json().catch(() => null);
+        console.error('❌ TeacherDashboard: Erro ao carregar atividades:', payload);
         toast.error(payload?.error || 'Erro ao carregar atividades');
       }
 
       if (exercisesRes.ok) {
         const exercisesData = await exercisesRes.json();
-        setExercisesCount(exercisesData.pagination?.total || 0);
+        const total = exercisesData.pagination?.total || 0;
+        setExercisesCount(total);
+        console.log('✅ TeacherDashboard: Total de exercícios:', total);
+      } else {
+        const payload = await exercisesRes.json().catch(() => null);
+        console.error('❌ TeacherDashboard: Erro ao carregar exercícios:', payload);
       }
     } catch (error) {
-      console.error(error);
+      console.error('❌ TeacherDashboard: Erro geral ao carregar dados:', error);
       toast.error('Erro ao carregar dados');
     } finally {
       setIsLoading(false);

@@ -61,9 +61,20 @@ export default function StudentDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Aguardar sessão estar disponível antes de buscar dados
-    if (session?.user) {
+    // Aguardar sessão estar completamente disponível (com id) antes de buscar dados
+    if (session?.user?.id && session?.user?.role) {
+      console.log('✅ StudentDashboard: Sessão pronta, buscando dados...', {
+        userId: session.user.id,
+        userRole: session.user.role
+      });
       fetchData();
+    } else {
+      console.log('⏳ StudentDashboard: Aguardando sessão...', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        hasUserId: !!session?.user?.id,
+        hasRole: !!session?.user?.role
+      });
     }
   }, [session]);
 
