@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { 
-  Users, 
-  UserPlus, 
-  Mail, 
-  LogOut, 
+import {
+  Users,
+  UserPlus,
+  Mail,
+  LogOut,
   BarChart3,
   Settings,
   Copy,
@@ -52,8 +52,32 @@ export default function SuperAdminDashboard() {
     title: '',
     message: '',
     type: 'danger',
-    onConfirm: () => {}
+    onConfirm: () => { }
   });
+
+  // Estado para informações do sistema
+  const [systemStatus, setSystemStatus] = useState<any>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+
+  const reloadSystemStatus = async () => {
+    setIsLoadingStatus(true);
+    try {
+      const response = await fetch('/api/system/status');
+      if (response.ok) {
+        const data = await response.json();
+        setSystemStatus(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar status do sistema:', error);
+    } finally {
+      setIsLoadingStatus(false);
+    }
+  };
+
+  // Carregar status ao iniciar
+  useEffect(() => {
+    reloadSystemStatus();
+  }, []);
 
   // Carregar convites existentes
   useEffect(() => {
@@ -146,7 +170,7 @@ export default function SuperAdminDashboard() {
 
       if (data.success) {
         toast.success('Convite criado com sucesso!');
-        
+
         // Adicionar novo convite à lista
         const newInvite: Invite = {
           id: Date.now().toString(),
@@ -157,7 +181,7 @@ export default function SuperAdminDashboard() {
           isUsed: false,
           isActive: true
         };
-        
+
         setShowInviteUrl(data.inviteUrl);
         setEmail('');
         // Recarregar convites do servidor
@@ -238,7 +262,7 @@ export default function SuperAdminDashboard() {
 
     const action = invite.isActive ? 'pausar' : 'ativar';
     const actionPast = invite.isActive ? 'pausado' : 'ativado';
-    
+
     showConfirmModal(
       `${action === 'pausar' ? 'Pausar' : 'Ativar'} Acesso`,
       `Tem certeza que deseja ${action} o acesso do convite para ${invite.email}?`,
@@ -303,31 +327,31 @@ export default function SuperAdminDashboard() {
                 .replace(/^ +/, "")
                 .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
             });
-            
+
             // Limpar cache do browser
             if ('caches' in window) {
-              caches.keys().then(function(names) {
+              caches.keys().then(function (names) {
                 for (let name of names) {
                   caches.delete(name);
                 }
               });
             }
-            
+
             // Limpar service workers
             if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
+              navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                for (let registration of registrations) {
                   registration.unregister();
                 }
               });
             }
           }
-          
+
           // Fazer logout sem redirecionamento automático
-          await signOut({ 
-            redirect: false 
+          await signOut({
+            redirect: false
           });
-          
+
           // Redirecionar manualmente para a página inicial
           if (typeof window !== 'undefined') {
             window.location.replace('/');
@@ -395,7 +419,7 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex items-center">
               <div className="p-2 bg-success-100 rounded-lg">
@@ -407,7 +431,7 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex items-center">
               <div className="p-2 bg-yellow-100 rounded-lg">
@@ -429,7 +453,7 @@ export default function SuperAdminDashboard() {
               Convidar Professor
             </h2>
           </div>
-          
+
           <form onSubmit={handleInviteTeacher} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -445,7 +469,7 @@ export default function SuperAdminDashboard() {
                 required
               />
             </div>
-            
+
             <button
               type="submit"
               disabled={isLoading}
@@ -454,7 +478,7 @@ export default function SuperAdminDashboard() {
               {isLoading ? 'Enviando...' : 'Enviar Convite'}
             </button>
           </form>
-          
+
           {/* Link do Convite */}
           {showInviteUrl && (
             <div className="mt-4 p-4 bg-green-50 rounded-md">
@@ -488,10 +512,10 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
           )}
-          
+
           <div className="mt-4 p-4 bg-blue-50 rounded-md">
             <p className="text-sm text-blue-800">
-              <strong>Como funciona:</strong> O professor receberá um link único que expira em 24 horas. 
+              <strong>Como funciona:</strong> O professor receberá um link único que expira em 24 horas.
               Ele poderá ativar sua conta fazendo login com Google usando o email convidado.
             </p>
           </div>
@@ -505,7 +529,7 @@ export default function SuperAdminDashboard() {
               Convites Enviados ({invites.length})
             </h2>
           </div>
-          
+
           {invites.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Mail className="w-12 h-12 mx-auto mb-4 text-gray-300" />
@@ -525,24 +549,22 @@ export default function SuperAdminDashboard() {
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            invite.isUsed 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs rounded-full ${invite.isUsed
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                            }`}>
                             {invite.isUsed ? 'Usado' : 'Pendente'}
                           </span>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            invite.isActive 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs rounded-full ${invite.isActive
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                            }`}>
                             {invite.isActive ? 'Ativo' : 'Pausado'}
                           </span>
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => copyToClipboard(invite.inviteUrl)}
@@ -551,7 +573,7 @@ export default function SuperAdminDashboard() {
                       >
                         <Copy className="w-4 h-4" />
                       </button>
-                      
+
                       <button
                         onClick={() => handleResetPassword(invite.id)}
                         className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
@@ -559,7 +581,7 @@ export default function SuperAdminDashboard() {
                       >
                         <RefreshCw className="w-4 h-4" />
                       </button>
-                      
+
                       {invite.userStatus?.exists && invite.userStatus?.isActive && (
                         <button
                           onClick={() => handleResetUserPassword(invite.email)}
@@ -569,7 +591,7 @@ export default function SuperAdminDashboard() {
                           <Settings className="w-4 h-4" />
                         </button>
                       )}
-                      
+
                       <button
                         onClick={() => handleDeleteAccess(invite.id)}
                         className="p-2 text-gray-600 hover:text-red-600 transition-colors"
@@ -587,37 +609,75 @@ export default function SuperAdminDashboard() {
 
         {/* System Information */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center mb-4">
-            <Settings className="w-5 h-5 text-primary-500 mr-2" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              Informações do Sistema
-            </h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Settings className="w-5 h-5 text-primary-500 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900">
+                Informações do Sistema
+              </h2>
+            </div>
+            <button
+              onClick={() => reloadSystemStatus()}
+              className="text-primary-600 hover:text-primary-800 text-sm flex items-center"
+              disabled={isLoadingStatus}
+            >
+              <RefreshCw className={`w-4 h-4 mr-1 ${isLoadingStatus ? 'animate-spin' : ''}`} />
+              Atualizar
+            </button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-gray-600">Versão</p>
-              <p className="text-lg text-gray-900">1.0.0</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Status</p>
-              <p className="text-lg text-green-600">Online</p>
+              <p className="text-lg text-gray-900">{systemStatus?.version || '...'}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Ambiente</p>
-              <p className="text-lg text-blue-600">Desenvolvimento</p>
+              <p className="text-lg text-blue-600 capitalize">{systemStatus?.environment || '...'}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Banco de Dados</p>
-              <p className="text-lg text-yellow-600">Simulado</p>
+              <div className="flex items-center">
+                <div className={`w-2 h-2 rounded-full mr-2 ${systemStatus?.database?.status === 'connected' ? 'bg-green-500' : 'bg-red-500'
+                  }`}></div>
+                <p className={`text-lg ${systemStatus?.database?.status === 'connected' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                  {systemStatus?.database?.status === 'connected' ? 'Conectado' : 'Desconectado'}
+                </p>
+              </div>
+              {systemStatus?.database?.latency && (
+                <p className="text-xs text-gray-400">Latência: {systemStatus.database.latency}</p>
+              )}
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Judge0 API</p>
-              <p className="text-lg text-yellow-600">Simulado</p>
+              <div className="flex items-center">
+                <div className={`w-2 h-2 rounded-full mr-2 ${systemStatus?.judge0?.status === 'operational' ? 'bg-green-500' :
+                  systemStatus?.judge0?.status === 'configured' ? 'bg-yellow-500' : 'bg-red-500'
+                  }`}></div>
+                <p className={`text-lg ${systemStatus?.judge0?.status === 'operational' ? 'text-green-600' :
+                  systemStatus?.judge0?.status === 'configured' ? 'text-yellow-600' : 'text-red-600'
+                  }`}>
+                  {systemStatus?.judge0?.status === 'operational' ? 'Online' :
+                    systemStatus?.judge0?.status === 'configured' ? 'Configurado' : 'Erro/Indefinido'}
+                </p>
+              </div>
+              {systemStatus?.judge0?.message && (
+                <p className="text-xs text-gray-400 truncate max-w-xs" title={systemStatus.judge0.message}>
+                  {systemStatus.judge0.message}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Google OAuth</p>
-              <p className="text-lg text-yellow-600">Simulado</p>
+              <div className="flex items-center">
+                <div className={`w-2 h-2 rounded-full mr-2 ${systemStatus?.oauth?.status === 'configured' ? 'bg-green-500' : 'bg-red-500'
+                  }`}></div>
+                <p className={`text-lg ${systemStatus?.oauth?.status === 'configured' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                  {systemStatus?.oauth?.status === 'configured' ? 'Configurado' : 'Não Configurado'}
+                </p>
+              </div>
             </div>
           </div>
         </div>

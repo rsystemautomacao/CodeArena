@@ -59,10 +59,10 @@ export const authOptions: NextAuthOptions = {
           // Verificar se é um email de professor (criado via convite)
           const { getDevInviteTokens } = await import('@/lib/invite');
           const devInvites = getDevInviteTokens();
-          const isProfessorEmail = devInvites.some(invite => 
+          const isProfessorEmail = devInvites.some(invite =>
             invite.email === credentials.email.toLowerCase() && invite.isUsed
           );
-          
+
           if (isProfessorEmail) {
             return {
               id: `professor-${credentials.email}`,
@@ -71,7 +71,7 @@ export const authOptions: NextAuthOptions = {
               role: 'professor',
             };
           }
-          
+
           // Simular diferentes tipos de usuário baseado no email
           if (credentials.email.includes('professor') || credentials.email.includes('teacher')) {
             return {
@@ -81,7 +81,7 @@ export const authOptions: NextAuthOptions = {
               role: 'professor',
             };
           }
-          
+
           return {
             id: 'aluno-dev',
             name: 'Aluno de Desenvolvimento',
@@ -91,12 +91,17 @@ export const authOptions: NextAuthOptions = {
         }
 
         // VERIFICAR SUPERADMIN PRIMEIRO (SEM BANCO DE DADOS)
-        if (credentials.email === 'admin@rsystem.com' && credentials.password === '@Desbravadores@93') {
+        // Apenas se as variáveis de ambiente estiverem configuradas
+        if (process.env.SUPERADMIN_EMAIL &&
+          process.env.SUPERADMIN_PASSWORD &&
+          credentials.email === process.env.SUPERADMIN_EMAIL &&
+          credentials.password === process.env.SUPERADMIN_PASSWORD) {
           console.log('✅ SUPERADMIN DETECTADO - LOGIN DIRETO');
           console.log('🔐 CREDENCIAIS SUPERADMIN:', {
             email: credentials.email,
             password: credentials.password,
-            match: credentials.email === 'admin@rsystem.com' && credentials.password === '@Desbravadores@93'
+            email: credentials.email,
+            match: true
           });
           return {
             id: 'superadmin-001',
@@ -110,57 +115,62 @@ export const authOptions: NextAuthOptions = {
         // CONECTAR AO BANCO E VERIFICAR USUÁRIO
         try {
           console.log('🔗 CONECTANDO AO BANCO DE DADOS...');
-          const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
-          
+          const MONGODB_URI = process.env.MONGODB_URI;
+
+          if (!MONGODB_URI) {
+            throw new Error('MONGODB_URI não definida nas variáveis de ambiente');
+          }
+
           await mongoose.connect(MONGODB_URI);
           console.log('✅ CONEXÃO COM BANCO ESTABELECIDA');
-          
+
           const db = mongoose.connection.db;
           if (!db) {
             console.log('❌ ERRO: Não foi possível obter referência do banco');
             throw new Error('Não foi possível conectar ao banco de dados');
           }
-          
+
           const usersCollection = db.collection('users');
           console.log('🔍 BUSCANDO USUÁRIO:', credentials.email);
-          
+
           // VERIFICAR SE É SUPERADMIN E FORÇAR CRIAÇÃO SE NECESSÁRIO
-          if (credentials.email === 'admin@rsystem.com') {
+          if (process.env.SUPERADMIN_EMAIL && credentials.email === process.env.SUPERADMIN_EMAIL) {
             console.log('🔧 VERIFICANDO SUPERADMIN NO BANCO...');
-            let superadmin = await usersCollection.findOne({ 
-              email: 'admin@rsystem.com',
+            let superadmin = await usersCollection.findOne({
+              email: process.env.SUPERADMIN_EMAIL,
               role: 'superadmin'
             });
-            
+
             if (!superadmin || !superadmin.password || superadmin.password.length === 0) {
               console.log('🔧 RECRIANDO SUPERADMIN NO BANCO...');
               // Deletar superadmin existente
-              await usersCollection.deleteMany({ 
-                email: 'admin@rsystem.com',
+              await usersCollection.deleteMany({
+                email: process.env.SUPERADMIN_EMAIL,
                 role: 'superadmin'
               });
-              
+
               // Criar novo superadmin
-              const hashedPassword = await bcrypt.hash('@Desbravadores@93', 12);
+              const adminPwd = process.env.SUPERADMIN_PASSWORD || 'admin123'; // Fallback seguro apenas para evitar crash, mas ideal é ter env
+              const hashedPassword = await bcrypt.hash(adminPwd, 12);
               const newSuperadmin = {
                 name: 'Super Admin',
-                email: 'admin@rsystem.com',
+                email: process.env.SUPERADMIN_EMAIL,
                 password: hashedPassword,
                 role: 'superadmin',
                 isActive: true,
                 createdAt: new Date(),
                 updatedAt: new Date()
               };
-              
+
               const result = await usersCollection.insertOne(newSuperadmin);
               console.log('✅ SUPERADMIN RECRIADO NO BANCO:', result.insertedId);
-              
-              superadmin = await usersCollection.findOne({ 
-                email: 'admin@rsystem.com',
+
+              superadmin = await usersCollection.findOne({
+                email: process.env.SUPERADMIN_EMAIL,
                 role: 'superadmin'
               });
             }
-            
+
             if (superadmin) {
               console.log('✅ SUPERADMIN ENCONTRADO NO BANCO:', {
                 id: superadmin._id,
@@ -168,12 +178,12 @@ export const authOptions: NextAuthOptions = {
                 hasPassword: !!superadmin.password,
                 passwordLength: superadmin.password ? superadmin.password.length : 0
               });
-              
+
               // Verificar senha
               console.log('🔑 VERIFICANDO SENHA DO SUPERADMIN...');
               const isPasswordValid = await bcrypt.compare(credentials.password, superadmin.password);
               console.log('🔑 RESULTADO DA VERIFICAÇÃO:', isPasswordValid);
-              
+
               if (isPasswordValid) {
                 console.log('✅ LOGIN SUPERADMIN SUCESSO!');
                 await mongoose.disconnect();
@@ -191,26 +201,26 @@ export const authOptions: NextAuthOptions = {
               }
             }
           }
-          
-          const user = await usersCollection.findOne({ 
+
+          const user = await usersCollection.findOne({
             email: credentials.email,
-            isActive: true 
+            isActive: true
           });
 
           if (!user) {
             console.log('❌ USUÁRIO NÃO ENCONTRADO NO BANCO');
             console.log('📧 Email buscado:', credentials.email);
             console.log('🔍 Buscando usuários com email similar...');
-            
+
             // Buscar usuários similares para debug
-            const similarUsers = await usersCollection.find({ 
+            const similarUsers = await usersCollection.find({
               email: { $regex: credentials.email, $options: 'i' }
             }).toArray();
             console.log('👥 USUÁRIOS SIMILARES ENCONTRADOS:', similarUsers.length);
             similarUsers.forEach(u => {
               console.log('  - Email:', u.email, '| Ativo:', u.isActive, '| Role:', u.role);
             });
-            
+
             await mongoose.disconnect();
             return null;
           }
@@ -228,10 +238,10 @@ export const authOptions: NextAuthOptions = {
           console.log('🔑 VERIFICANDO SENHA...');
           console.log('🔑 Senha fornecida:', credentials.password);
           console.log('🔑 Hash no banco:', user.password ? 'PRESENTE' : 'AUSENTE');
-          
+
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
           console.log('🔑 RESULTADO DA VERIFICAÇÃO:', isPasswordValid);
-          
+
           if (!isPasswordValid) {
             console.log('❌ SENHA INCORRETA');
             console.log('🔑 Senha fornecida:', credentials.password);
@@ -248,11 +258,11 @@ export const authOptions: NextAuthOptions = {
               email: credentials.email,
               isUsed: true
             });
-            
+
             if (!invite) {
               console.log('❌ PROFESSOR SEM CONVITE VÁLIDO:', credentials.email);
               console.log('🔍 VERIFICANDO SE É UM PROFESSOR CRIADO DIRETAMENTE...');
-              
+
               // Se não tem convite, mas é um professor ativo, permitir login
               // (pode ser um professor criado diretamente pelo superadmin)
               if (user.isActive) {
@@ -284,7 +294,7 @@ export const authOptions: NextAuthOptions = {
             image: user.image,
             profileCompleted: user.profileCompleted || false,
           };
-          
+
           console.log('🚀 RETORNANDO USUÁRIO:', userToReturn);
           return userToReturn;
         } catch (error) {
@@ -340,40 +350,44 @@ export const authOptions: NextAuthOptions = {
           hasProfile: !!profile
         });
         try {
-          const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
-          
+          const MONGODB_URI = process.env.MONGODB_URI;
+
+          if (!MONGODB_URI) {
+            throw new Error('MONGODB_URI não definida nas variáveis de ambiente');
+          }
+
           await mongoose.connect(MONGODB_URI);
-          
+
           const db = mongoose.connection.db;
           if (!db) {
             throw new Error('Não foi possível conectar ao banco de dados');
           }
-          
+
           const usersCollection = db.collection('users');
           const invitesCollection = db.collection('invites');
-          
+
           // Verificar se o usuário já existe
           const existingUser = await usersCollection.findOne({ email: user.email });
-          
+
           if (existingUser) {
             // Atualizar dados do Google e definir o papel do usuário
             await usersCollection.updateOne(
               { _id: existingUser._id },
               { $set: { name: user.name, image: user.image } }
             );
-            
+
             // CRÍTICO: Definir user.id com o _id do MongoDB
             user.id = existingUser._id.toString();
             user.role = existingUser.role;
             console.log('✅ USUÁRIO EXISTENTE - ID DEFINIDO:', user.id);
             console.log('✅ USUÁRIO EXISTENTE - ROLE DEFINIDO:', existingUser.role);
-            
+
             await mongoose.disconnect();
             return true;
           }
 
           // Verificar se há um convite pendente para professores
-          const invite = await invitesCollection.findOne({ 
+          const invite = await invitesCollection.findOne({
             email: user.email,
             isUsed: false,
             expiresAt: { $gt: new Date() }
@@ -393,7 +407,7 @@ export const authOptions: NextAuthOptions = {
 
             // Buscar o usuário criado para obter o _id
             const newUser = await usersCollection.findOne({ _id: insertResult.insertedId });
-            
+
             if (newUser) {
               // CRÍTICO: Definir user.id com o _id do MongoDB
               user.id = newUser._id.toString();
@@ -430,7 +444,7 @@ export const authOptions: NextAuthOptions = {
 
           // Buscar o usuário criado para obter o _id
           const newUser = await usersCollection.findOne({ _id: insertResult.insertedId });
-          
+
           if (newUser) {
             // CRÍTICO: Definir user.id com o _id do MongoDB
             user.id = newUser._id.toString();
@@ -461,9 +475,9 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, trigger, session }) {
-      console.log('🔑 JWT CALLBACK:', { 
-        hasUser: !!user, 
-        userRole: user?.role, 
+      console.log('🔑 JWT CALLBACK:', {
+        hasUser: !!user,
+        userRole: user?.role,
         userEmail: user?.email,
         userId: user?.id,
         tokenRole: token.role,
@@ -471,7 +485,7 @@ export const authOptions: NextAuthOptions = {
         trigger,
         sessionName: session?.user?.name
       });
-      
+
       // Quando o usuário faz login
       if (user) {
         // Garantir que token.sub seja definido com o ID do usuário
@@ -491,18 +505,18 @@ export const authOptions: NextAuthOptions = {
           token.picture = user.image;
         }
         token.profileCompleted = user.profileCompleted;
-        
+
         // CONTROLE DE SESSÃO ÚNICA: Se for aluno, invalidar sessões anteriores
         if (user.role === 'aluno' && user.id) {
           try {
             // Gerar um token único para esta sessão (usando timestamp + user ID)
             const sessionToken = `${user.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
             token.sessionToken = sessionToken;
-            
+
             // Invalidar todas as sessões anteriores do aluno
             const invalidatedCount = await invalidateUserSessions(user.id);
             console.log(`🔒 Sessões anteriores invalidadas para aluno ${user.id}: ${invalidatedCount}`);
-            
+
             // Nota: A criação da sessão com IP será feita via API /api/session/register
             // após o login, pois não temos acesso ao request aqui
             console.log(`✅ Nova sessão preparada para aluno ${user.id}`);
@@ -511,17 +525,17 @@ export const authOptions: NextAuthOptions = {
             // Não bloquear login em caso de erro
           }
         }
-        
-        console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', { 
+
+        console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', {
           sub: token.sub,
-          role: user.role, 
-          name: user.name, 
+          role: user.role,
+          name: user.name,
           hasImage: !!token.picture,
           imageLength: token.picture?.length || 0,
-          profileCompleted: user.profileCompleted 
+          profileCompleted: user.profileCompleted
         });
       }
-      
+
       // Garantir que token.sub sempre existe
       if (!token.sub && token.email) {
         try {
@@ -535,7 +549,7 @@ export const authOptions: NextAuthOptions = {
           console.error('Erro ao buscar ID do usuário:', error);
         }
       }
-      
+
       // Buscar profileCompleted do banco apenas uma vez se não estiver no token
       if (token.profileCompleted === undefined && token.email) {
         try {
@@ -551,7 +565,7 @@ export const authOptions: NextAuthOptions = {
           token.profileCompleted = false;
         }
       }
-      
+
       // Quando update() é chamado (trigger === 'update')
       if (trigger === 'update' && session) {
         if (session.user?.name) {
@@ -562,7 +576,7 @@ export const authOptions: NextAuthOptions = {
           // CRÍTICO: Não armazenar base64 no token (pode causar REQUEST_HEADER_TOO_LARGE)
           // Se a imagem for base64 (data:image), buscar do banco e usar URL ou limitar tamanho
           const imageValue = session.user.image;
-          
+
           // Se for base64 e muito grande (> 1KB), não atualizar no token
           if (imageValue.startsWith('data:image') && imageValue.length > 1024) {
             console.log('⚠️ IMAGEM BASE64 MUITO GRANDE - NÃO ATUALIZANDO NO TOKEN (evitar REQUEST_HEADER_TOO_LARGE)');
@@ -592,17 +606,17 @@ export const authOptions: NextAuthOptions = {
           }
         }
       }
-      
+
       // FORÇAR SUPERADMIN SE FOR O EMAIL CORRETO
       if (user?.email === 'admin@rsystem.com' || token.email === 'admin@rsystem.com') {
         token.role = 'superadmin';
         console.log('🔧 FORÇANDO ROLE SUPERADMIN PARA:', user?.email || token.email);
       }
-      
+
       return token;
     },
     async session({ session, token }) {
-      console.log('📋 SESSION CALLBACK:', { 
+      console.log('📋 SESSION CALLBACK:', {
         tokenRole: token.role,
         tokenName: token.name,
         tokenSub: token.sub,
@@ -610,7 +624,7 @@ export const authOptions: NextAuthOptions = {
         sessionUserEmail: session.user?.email,
         sessionUserName: session.user?.name
       });
-      
+
       if (token) {
         // CRÍTICO: Garantir que session.user.id sempre existe
         // Se token.sub não existir, buscar do banco usando email
@@ -639,7 +653,7 @@ export const authOptions: NextAuthOptions = {
             // Não retornar erro aqui, apenas logar
           }
         }
-        
+
         // Garantir que role sempre existe
         if (token.role) {
           session.user.role = token.role as string;
@@ -661,7 +675,7 @@ export const authOptions: NextAuthOptions = {
             session.user.role = 'aluno'; // Fallback padrão
           }
         }
-        
+
         // Atualizar nome e imagem do token se existirem
         if (token.name) {
           session.user.name = token.name as string;
@@ -693,19 +707,19 @@ export const authOptions: NextAuthOptions = {
             session.user.image = pictureValue;
           }
         }
-        
+
         // Atualizar profileCompleted do token se existir
         if (token.profileCompleted !== undefined) {
           session.user.profileCompleted = token.profileCompleted as boolean;
         }
-        
+
         // FORÇAR SUPERADMIN SE FOR O EMAIL CORRETO
         if (session.user.email === 'admin@rsystem.com') {
           session.user.role = 'superadmin';
           console.log('🔧 FORÇANDO SESSION ROLE SUPERADMIN PARA:', session.user.email);
         }
       }
-      
+
       // VALIDAÇÃO FINAL: Garantir que session.user.id existe
       if (!session.user.id) {
         console.error('❌ ERRO CRÍTICO: session.user.id não foi definido!', {
@@ -733,15 +747,15 @@ export const authOptions: NextAuthOptions = {
           }
         }
       }
-      
-      console.log('✅ SESSION FINAL:', { 
+
+      console.log('✅ SESSION FINAL:', {
         userId: session.user?.id,
-        userRole: session.user?.role, 
+        userRole: session.user?.role,
         userEmail: session.user?.email,
         userName: session.user?.name,
         profileCompleted: session.user?.profileCompleted
       });
-      
+
       return session;
     },
   },

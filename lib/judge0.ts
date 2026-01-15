@@ -52,6 +52,32 @@ export interface Judge0Result {
   };
 }
 
+// Helper para delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper para fetch com retry
+async function fetchWithRetry(url: string, options: RequestInit, retries = 3, backoff = 1000): Promise<Response> {
+  try {
+    const response = await fetch(url, options);
+    
+    // Se for erro de servidor (5xx) ou Too Many Requests (429), tentar novamente
+    if ((response.status >= 500 || response.status === 429) && retries > 0) {
+      console.warn(`⚠️ Erro ${response.status} ao acessar ${url}. Tentando novamente em ${backoff}ms... (${retries} tentativas restantes)`);
+      await delay(backoff);
+      return fetchWithRetry(url, options, retries - 1, backoff * 2);
+    }
+    
+    return response;
+  } catch (error) {
+    if (retries > 0) {
+      console.warn(`⚠️ Erro de rede ao acessar ${url}. Tentando novamente em ${backoff}ms... (${retries} tentativas restantes)`, error);
+      await delay(backoff);
+      return fetchWithRetry(url, options, retries - 1, backoff * 2);
+    }
+    throw error;
+  }
+}
+
 export async function submitCode(
   code: string,
   language: string,
@@ -68,6 +94,7 @@ export async function submitCode(
     memory?: number;
     output?: string;
     expectedOutput?: string;
+    compilationError?: string;
   }>;
   error?: string;
 }> {
@@ -83,6 +110,17 @@ export async function submitCode(
 
     const results = [];
 
+    // Validar API Key
+    if (!JUDGE0_API_KEY && JUDGE0_API_URL.includes('rapidapi')) {
+      console.warn('⚠️ JUDGE0_API_KEY não configurada. A execução pode falhar se a API exigir autenticação.');
+    }
+
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(JUDGE0_API_KEY ? { 'X-RapidAPI-Key': JUDGE0_API_KEY } : {}),
+        ...(JUDGE0_API_URL.includes('rapidapi') ? { 'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com' } : {})
+    };
+
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
       
@@ -96,18 +134,14 @@ export async function submitCode(
       };
 
       // Submeter código
-      const submitResponse = await fetch(`${JUDGE0_API_URL}/submissions`, {
+      const submitResponse = await fetchWithRetry(`${JUDGE0_API_URL}/submissions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-RapidAPI-Key': JUDGE0_API_KEY || '',
-          'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-        },
+        headers,
         body: JSON.stringify(submission),
       });
 
       if (!submitResponse.ok) {
-        throw new Error(`Erro ao submeter código: ${submitResponse.statusText}`);
+        throw new Error(`Erro ao submeter código: ${submitResponse.status} ${submitResponse.statusText}`);
       }
 
       const submitData = await submitResponse.json();
@@ -116,20 +150,21 @@ export async function submitCode(
       // Aguardar resultado
       let result: Judge0Result | null = null;
       let attempts = 0;
-      const maxAttempts = 30; // 30 segundos máximo
+      const maxAttempts = 40; // Aumentado para 40 segundos
+      let pollInterval = 1000;
 
       while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Aguardar 1 segundo
+        await delay(pollInterval);
 
-        const resultResponse = await fetch(`${JUDGE0_API_URL}/submissions/${token}`, {
-          headers: {
-            'X-RapidAPI-Key': JUDGE0_API_KEY || '',
-            'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-          },
+        const resultResponse = await fetchWithRetry(`${JUDGE0_API_URL}/submissions/${token}`, {
+          headers,
         });
 
         if (!resultResponse.ok) {
-          throw new Error(`Erro ao obter resultado: ${resultResponse.statusText}`);
+           // Se falhar o polling, tenta novamente na próxima iteração
+           console.warn(`⚠️ Falha ao buscar resultado (Token: ${token}): ${resultResponse.statusText}`);
+           attempts++;
+           continue;
         }
 
         result = await resultResponse.json();
@@ -140,13 +175,16 @@ export async function submitCode(
         }
 
         attempts++;
+        // Backoff leve no polling para não sobrecarregar
+        if (attempts > 10) pollInterval = 1500;
+        if (attempts > 20) pollInterval = 2000;
       }
 
-      if (!result) {
+      if (!result || (result.status.id === 1 || result.status.id === 2)) {
         results.push({
           testCase: i + 1,
           status: 'time_limit_exceeded',
-          message: 'Tempo limite excedido para obter resultado',
+          message: 'Tempo limite excedido para obter resposta do servidor (Judge0)',
         });
         continue;
       }
@@ -161,7 +199,6 @@ export async function submitCode(
           const actualOutput = (result.stdout || '').trim().replace(/\r\n/g, '\n');
           const expectedOutput = (testCase.expectedOutput || '').trim().replace(/\r\n/g, '\n');
           
-          // Comparação mais rigorosa - deve ser exatamente igual
           if (actualOutput === expectedOutput) {
             status = 'accepted';
             message = 'Resposta correta';
@@ -190,10 +227,13 @@ export async function submitCode(
         case 12:
         case 13:
         case 14:
-        case 15: // Runtime Error
+        case 15: // Runtime Error e outros erros
           status = 'runtime_error';
-          message = result.stderr || result.compile_output || 'Erro de execução - verifique se o código está completo e correto';
+          message = result.stderr || result.compile_output || result.message || 'Erro de execução - verifique se o código está completo e correto';
           break;
+        default:
+           status = 'runtime_error';
+           message = `Erro desconhecido (Status ID: ${result.status.id})`;
       }
 
       results.push({
@@ -204,7 +244,6 @@ export async function submitCode(
         memory: result.memory,
         output: result.stdout || result.stderr || result.compile_output || '',
         expectedOutput: testCase.expectedOutput,
-        // Incluir detalhes completos do erro de compilação
         compilationError: status === 'compilation_error' ? (result.compile_output || result.stderr || '') : undefined,
       });
     }
@@ -249,6 +288,13 @@ export async function testCode(
       };
     }
 
+    // Headers comuns
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(JUDGE0_API_KEY ? { 'X-RapidAPI-Key': JUDGE0_API_KEY } : {}),
+        ...(JUDGE0_API_URL.includes('rapidapi') ? { 'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com' } : {})
+    };
+
     const submission: Judge0Submission = {
       language_id: languageConfig.id,
       source_code: code,
@@ -258,18 +304,14 @@ export async function testCode(
     };
 
     // Submeter código
-    const submitResponse = await fetch(`${JUDGE0_API_URL}/submissions`, {
+    const submitResponse = await fetchWithRetry(`${JUDGE0_API_URL}/submissions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-RapidAPI-Key': JUDGE0_API_KEY || '',
-        'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-      },
+      headers,
       body: JSON.stringify(submission),
     });
 
     if (!submitResponse.ok) {
-      throw new Error(`Erro ao submeter código: ${submitResponse.statusText}`);
+      throw new Error(`Erro ao submeter código: ${submitResponse.status}`);
     }
 
     const submitData = await submitResponse.json();
@@ -278,20 +320,19 @@ export async function testCode(
     // Aguardar resultado
     let result: Judge0Result | null = null;
     let attempts = 0;
-    const maxAttempts = 10; // 10 segundos máximo para teste
+    const maxAttempts = 15; // 15 segundos para teste rápido
+    let pollInterval = 1000;
 
     while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await delay(pollInterval);
 
-      const resultResponse = await fetch(`${JUDGE0_API_URL}/submissions/${token}`, {
-        headers: {
-          'X-RapidAPI-Key': JUDGE0_API_KEY || '',
-          'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-        },
+      const resultResponse = await fetchWithRetry(`${JUDGE0_API_URL}/submissions/${token}`, {
+        headers,
       });
 
       if (!resultResponse.ok) {
-        throw new Error(`Erro ao obter resultado: ${resultResponse.statusText}`);
+          attempts++;
+          continue;
       }
 
       result = await resultResponse.json();
@@ -336,7 +377,7 @@ export async function testCode(
       case 14:
       case 15: // Runtime Error
         status = 'runtime_error';
-        message = 'Erro de execução';
+        message = result.stderr ? 'Erro de execução' : (result.message || 'Erro desconhecido');
         break;
     }
 
