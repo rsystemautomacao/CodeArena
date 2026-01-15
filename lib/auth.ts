@@ -474,287 +474,112 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, trigger, session }) {
-      console.log('🔑 JWT CALLBACK:', {
-        hasUser: !!user,
-        userRole: user?.role,
-        userEmail: user?.email,
-        userId: user?.id,
-        tokenRole: token.role,
-        tokenSub: token.sub,
-        trigger,
-        sessionName: session?.user?.name
-      });
-
-      // Quando o usuário faz login
+      // 1. Initial Sign In (user object is available)
       if (user) {
-        // Garantir que token.sub seja definido com o ID do usuário
         token.sub = user.id;
         token.role = user.role;
         token.name = user.name;
-        // CRÍTICO: Não armazenar base64 grande no token (evita REQUEST_HEADER_TOO_LARGE)
-        if (user.image) {
-          // Se for base64 e muito grande, não armazenar no token
-          if (user.image.startsWith('data:image') && user.image.length > 1024) {
-            console.log('⚠️ IGNORANDO BASE64 GRANDE NO TOKEN AO FAZER LOGIN');
-            token.picture = undefined; // Não armazenar base64 grande
-          } else {
-            token.picture = user.image;
-          }
-        } else {
-          token.picture = user.image;
-        }
+        token.picture = user.image;
         token.profileCompleted = user.profileCompleted;
 
-        // CONTROLE DE SESSÃO ÚNICA: Se for aluno, invalidar sessões anteriores
+        // Validar imagem base64 grande
+        if (user.image?.startsWith('data:image') && user.image.length > 1024) {
+          token.picture = undefined; // Não armazenar no token
+        }
+
+        // Sessão única para alunos
         if (user.role === 'aluno' && user.id) {
           try {
-            // Gerar um token único para esta sessão (usando timestamp + user ID)
-            const sessionToken = `${user.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-            token.sessionToken = sessionToken;
+            // Invalidação assíncrona (fire and forget) para não bloquear o login
+            invalidateUserSessions(user.id).catch(err =>
+              console.error('Erro ao invalidar sessões em background:', err)
+            );
+          } catch (e) {
+            // Ignorar erro síncrono
+          }
+        }
+      }
 
-            // Invalidar todas as sessões anteriores do aluno
-            const invalidatedCount = await invalidateUserSessions(user.id);
-            console.log(`🔒 Sessões anteriores invalidadas para aluno ${user.id}: ${invalidatedCount}`);
+      // 2. Session Update (trigger === 'update')
+      if (trigger === 'update' && session?.user) {
+        if (session.user.name) token.name = session.user.name;
+        if (session.user.role) token.role = session.user.role;
 
-            // Nota: A criação da sessão com IP será feita via API /api/session/register
-            // após o login, pois não temos acesso ao request aqui
-            console.log(`✅ Nova sessão preparada para aluno ${user.id}`);
-          } catch (error) {
-            console.error('❌ Erro ao gerenciar sessão do aluno:', error);
-            // Não bloquear login em caso de erro
+        if (session.user.image) {
+          // Não salvar base64 grande no token
+          if (session.user.image.startsWith('data:image') && session.user.image.length > 1024) {
+            token.picture = undefined;
+          } else {
+            token.picture = session.user.image;
           }
         }
 
-        console.log('✅ DADOS DO USUÁRIO DEFINIDOS NO TOKEN:', {
-          sub: token.sub,
-          role: user.role,
-          name: user.name,
-          hasImage: !!token.picture,
-          imageLength: token.picture?.length || 0,
-          profileCompleted: user.profileCompleted
-        });
+        if (session.user.profileCompleted !== undefined) {
+          token.profileCompleted = session.user.profileCompleted;
+        }
       }
 
-      // Garantir que token.sub sempre existe
-      if (!token.sub && token.email) {
+      // 3. Fallback: Se faltar dados críticos no token (ex: role ou profileCompleted)
+      // Isso acontece se o token for antigo ou se algo falhou no login
+      if (!token.role || token.profileCompleted === undefined) {
+        // Evitar consulta se for superadmin hardcoded
+        if (token.email === 'admin@rsystem.com') {
+          token.role = 'superadmin';
+          token.sub = 'superadmin-001';
+          token.name = 'Super Admin';
+          return token;
+        }
+
         try {
           await connectDB();
-          const dbUser = await User.findOne({ email: token.email }).select('_id');
+          // Buscar apenas os campos necessários (ID é buscado pelo email se sub não existir)
+          const query = token.sub ? { _id: token.sub } : { email: token.email };
+
+          // Usar lean() para performance se possível, mas Model.findOne retorna documento
+          const dbUser = await User.findOne(query).select('role profileCompleted name avatar image');
+
           if (dbUser) {
             token.sub = dbUser._id.toString();
-            console.log('✅ TOKEN.SUB DEFINIDO DO BANCO:', token.sub);
-          }
-        } catch (error) {
-          console.error('Erro ao buscar ID do usuário:', error);
-        }
-      }
-
-      // Buscar profileCompleted do banco apenas uma vez se não estiver no token
-      if (token.profileCompleted === undefined && token.email) {
-        try {
-          await connectDB();
-          const dbUser = await User.findOne({ email: token.email }).select('profileCompleted');
-          if (dbUser) {
+            token.role = dbUser.role || 'aluno';
             token.profileCompleted = dbUser.profileCompleted || false;
-          } else {
-            token.profileCompleted = false;
-          }
-        } catch (error) {
-          console.error('Erro ao buscar profileCompleted:', error);
-          token.profileCompleted = false;
-        }
-      }
+            if (!token.name) token.name = dbUser.name;
 
-      // Quando update() é chamado (trigger === 'update')
-      if (trigger === 'update' && session) {
-        if (session.user?.name) {
-          token.name = session.user.name;
-          console.log('✅ NOME ATUALIZADO NO TOKEN:', session.user.name);
-        }
-        if (session.user?.image) {
-          // CRÍTICO: Não armazenar base64 no token (pode causar REQUEST_HEADER_TOO_LARGE)
-          // Se a imagem for base64 (data:image), buscar do banco e usar URL ou limitar tamanho
-          const imageValue = session.user.image;
-
-          // Se for base64 e muito grande (> 1KB), não atualizar no token
-          if (imageValue.startsWith('data:image') && imageValue.length > 1024) {
-            console.log('⚠️ IMAGEM BASE64 MUITO GRANDE - NÃO ATUALIZANDO NO TOKEN (evitar REQUEST_HEADER_TOO_LARGE)');
-            // Buscar URL do banco em vez de usar base64
-            try {
-              await connectDB();
-              const dbUser = await User.findOne({ email: token.email }).select('avatar image');
-              if (dbUser && (dbUser.avatar || dbUser.image)) {
-                // Usar URL se existir, senão usar apenas uma referência pequena
-                const avatarUrl = dbUser.avatar || dbUser.image;
-                if (avatarUrl && !avatarUrl.startsWith('data:image')) {
-                  token.picture = avatarUrl;
-                  console.log('✅ URL DA IMAGEM ATUALIZADA NO TOKEN:', avatarUrl);
-                } else {
-                  // Se for base64, usar apenas um hash ou omitir
-                  token.picture = undefined; // Não armazenar base64 grande no token
-                  console.log('⚠️ IGNORANDO BASE64 GRANDE NO TOKEN');
-                }
+            // Recuperar imagem se não estiver no token
+            if (!token.picture) {
+              const avatar = dbUser.avatar || dbUser.image;
+              if (avatar && !avatar.startsWith('data:image')) {
+                token.picture = avatar;
               }
-            } catch (e) {
-              console.error('Erro ao buscar avatar do banco:', e);
             }
           } else {
-            // Se não for base64 ou for pequeno, atualizar normalmente
-            token.picture = imageValue;
-            console.log('✅ IMAGEM ATUALIZADA NO TOKEN (URL ou pequena):', imageValue.substring(0, 100));
+            // Se não achar user no banco (pode ser superadmin ou erro), define fallback seguro
+            token.role = token.role || 'aluno';
           }
+        } catch (error) {
+          console.error('Erro ao hidratar token:', error);
+          // Fallback para não quebrar a sessão
+          if (!token.role) token.role = 'aluno';
         }
-      }
-
-      // FORÇAR SUPERADMIN SE FOR O EMAIL CORRETO
-      if (user?.email === 'admin@rsystem.com' || token.email === 'admin@rsystem.com') {
-        token.role = 'superadmin';
-        console.log('🔧 FORÇANDO ROLE SUPERADMIN PARA:', user?.email || token.email);
       }
 
       return token;
     },
     async session({ session, token }) {
-      console.log('📋 SESSION CALLBACK:', {
-        tokenRole: token.role,
-        tokenName: token.name,
-        tokenSub: token.sub,
-        sessionUserRole: session.user?.role,
-        sessionUserEmail: session.user?.email,
-        sessionUserName: session.user?.name
-      });
-
+      // Otimização: Session lê DIRETAMENTE do token, sem ir ao banco
       if (token) {
-        // CRÍTICO: Garantir que session.user.id sempre existe
-        // Se token.sub não existir, buscar do banco usando email
-        if (token.sub) {
-          session.user.id = token.sub;
-          console.log('✅ SESSION USER ID DO TOKEN:', token.sub);
-        } else if (token.email) {
-          // Fallback: buscar ID do banco usando email
-          try {
-            await connectDB();
-            const User = (await import('@/models/User')).default;
-            if (User) {
-              const dbUser = await User.findOne({ email: token.email }).select('_id');
-              if (dbUser) {
-                session.user.id = dbUser._id.toString();
-                // Atualizar token.sub para próxima vez
-                token.sub = dbUser._id.toString();
-                console.log('✅ SESSION USER ID BUSCADO DO BANCO:', session.user.id);
-              } else {
-                console.error('❌ USUÁRIO NÃO ENCONTRADO NO BANCO:', token.email);
-                // Não retornar erro aqui, apenas logar
-              }
-            }
-          } catch (error) {
-            console.error('❌ ERRO AO BUSCAR USER ID DO BANCO:', error);
-            // Não retornar erro aqui, apenas logar
-          }
-        }
+        session.user.id = token.sub as string;
+        session.user.role = token.role as string;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        session.user.image = token.picture as string | null | undefined;
+        session.user.profileCompleted = token.profileCompleted as boolean;
 
-        // Garantir que role sempre existe
-        if (token.role) {
-          session.user.role = token.role as string;
-        } else {
-          // Fallback: buscar role do banco
-          try {
-            await connectDB();
-            const User = (await import('@/models/User')).default;
-            if (User && token.email) {
-              const dbUser = await User.findOne({ email: token.email }).select('role');
-              if (dbUser) {
-                session.user.role = dbUser.role || 'aluno';
-                token.role = dbUser.role || 'aluno';
-                console.log('✅ SESSION ROLE BUSCADO DO BANCO:', session.user.role);
-              }
-            }
-          } catch (error) {
-            console.error('❌ ERRO AO BUSCAR ROLE DO BANCO:', error);
-            session.user.role = 'aluno'; // Fallback padrão
-          }
-        }
-
-        // Atualizar nome e imagem do token se existirem
-        if (token.name) {
-          session.user.name = token.name as string;
-        }
-        // CRÍTICO: Não passar base64 grande na sessão (evita REQUEST_HEADER_TOO_LARGE)
-        if (token.picture) {
-          const pictureValue = token.picture as string;
-          // Se for base64 e muito grande, buscar URL do banco em vez disso
-          if (pictureValue.startsWith('data:image') && pictureValue.length > 1024) {
-            try {
-              await connectDB();
-              const dbUser = await User.findOne({ email: token.email }).select('avatar image');
-              if (dbUser) {
-                const avatarUrl = dbUser.avatar || dbUser.image;
-                // Se houver URL (não base64), usar ela
-                if (avatarUrl && !avatarUrl.startsWith('data:image')) {
-                  session.user.image = avatarUrl;
-                } else {
-                  // Se for base64, não passar na sessão para evitar header muito grande
-                  session.user.image = undefined;
-                  console.log('⚠️ BASE64 GRANDE DETECTADO - NÃO PASSANDO NA SESSÃO');
-                }
-              }
-            } catch (e) {
-              console.error('Erro ao buscar avatar do banco:', e);
-              session.user.image = undefined; // Não passar base64 grande
-            }
-          } else {
-            session.user.image = pictureValue;
-          }
-        }
-
-        // Atualizar profileCompleted do token se existir
-        if (token.profileCompleted !== undefined) {
-          session.user.profileCompleted = token.profileCompleted as boolean;
-        }
-
-        // FORÇAR SUPERADMIN SE FOR O EMAIL CORRETO
+        // Tratamento especial para Super Admin Hardcoded
         if (session.user.email === 'admin@rsystem.com') {
           session.user.role = 'superadmin';
-          console.log('🔧 FORÇANDO SESSION ROLE SUPERADMIN PARA:', session.user.email);
+          session.user.id = 'superadmin-001';
         }
       }
-
-      // VALIDAÇÃO FINAL: Garantir que session.user.id existe
-      if (!session.user.id) {
-        console.error('❌ ERRO CRÍTICO: session.user.id não foi definido!', {
-          tokenSub: token.sub,
-          tokenEmail: token.email,
-          sessionUserEmail: session.user?.email
-        });
-        // Tentar uma última vez buscar do banco
-        if (session.user.email) {
-          try {
-            await connectDB();
-            const User = (await import('@/models/User')).default;
-            if (User) {
-              const dbUser = await User.findOne({ email: session.user.email }).select('_id role');
-              if (dbUser) {
-                session.user.id = dbUser._id.toString();
-                if (!session.user.role) {
-                  session.user.role = dbUser.role || 'aluno';
-                }
-                console.log('✅ SESSION USER ID DEFINIDO NO ÚLTIMO FALLBACK:', session.user.id);
-              }
-            }
-          } catch (error) {
-            console.error('❌ ERRO NO ÚLTIMO FALLBACK:', error);
-          }
-        }
-      }
-
-      console.log('✅ SESSION FINAL:', {
-        userId: session.user?.id,
-        userRole: session.user?.role,
-        userEmail: session.user?.email,
-        userName: session.user?.name,
-        profileCompleted: session.user?.profileCompleted
-      });
-
       return session;
     },
   },
