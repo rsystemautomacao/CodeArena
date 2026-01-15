@@ -99,8 +99,7 @@ export const authOptions: NextAuthOptions = {
           console.log('✅ SUPERADMIN DETECTADO - LOGIN DIRETO');
           console.log('🔐 CREDENCIAIS SUPERADMIN:', {
             email: credentials.email,
-            password: credentials.password,
-            email: credentials.email,
+            password: credentials.password ? '***' : undefined, // Ocultar senha nos logs por segurança
             match: true
           });
           return {
