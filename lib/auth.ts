@@ -571,7 +571,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.name = token.name as string;
         session.user.email = token.email as string;
-        session.user.image = token.picture as string | null | undefined;
+        session.user.image = (token.picture as string) || undefined;
         session.user.profileCompleted = token.profileCompleted as boolean;
 
         // Tratamento especial para Super Admin Hardcoded
