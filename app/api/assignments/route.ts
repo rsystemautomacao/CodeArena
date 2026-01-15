@@ -222,10 +222,10 @@ export async function GET(request: NextRequest) {
           students: studentObjectId,
           isActive: true,
         })
-        .select('_id')
-        .lean();
+          .select('_id')
+          .lean();
 
-        const classroomIds = classrooms.map((item) => item._id.toString());
+        const classroomIds = classrooms.map((item: any) => item._id.toString());
 
         console.log('✅ GET ASSIGNMENTS: Turmas do aluno encontradas:', classroomIds.length);
 
@@ -246,7 +246,7 @@ export async function GET(request: NextRequest) {
         console.error('❌ GET ASSIGNMENTS: Erro ao buscar turmas do aluno:', e);
         console.error('❌ GET ASSIGNMENTS: Stack trace:', e?.stack);
         return NextResponse.json(
-          { 
+          {
             error: 'Erro ao buscar turmas do aluno',
             debug: process.env.NODE_ENV === 'development' ? e?.message : undefined
           },
@@ -267,7 +267,7 @@ export async function GET(request: NextRequest) {
         .populate('exercises', 'title difficulty tags')
         .sort({ startDate: 1 })
         .lean();
-      
+
       console.log('✅ GET ASSIGNMENTS: Atividades encontradas:', assignments?.length || 0);
       return NextResponse.json({ assignments: assignments || [] });
     } catch (e: any) {
@@ -279,7 +279,7 @@ export async function GET(request: NextRequest) {
         code: e?.code,
       });
       return NextResponse.json(
-        { 
+        {
           error: 'Erro ao buscar atividades',
           debug: process.env.NODE_ENV === 'development' ? e?.message : undefined
         },
@@ -295,7 +295,7 @@ export async function GET(request: NextRequest) {
       code: error?.code,
     });
     return NextResponse.json(
-      { 
+      {
         error: 'Erro interno do servidor',
         debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
       },
