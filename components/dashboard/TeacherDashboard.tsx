@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { 
-  BookOpen, 
-  Users, 
-  Plus, 
+import {
+  BookOpen,
+  Users,
+  Plus,
   BarChart3,
   Clock,
   Menu,
@@ -48,364 +48,320 @@ export default function TeacherDashboard() {
   const recentClassrooms = classrooms.slice(0, 3);
 
   useEffect(() => {
-    // Aguardar sessão estar completamente disponível (com id) antes de buscar dados
     if (session?.user?.id && session?.user?.role) {
-      console.log('✅ TeacherDashboard: Sessão pronta, buscando dados...', {
-        userId: session.user.id,
-        userRole: session.user.role
-      });
       fetchData();
-    } else {
-      console.log('⏳ TeacherDashboard: Aguardando sessão...', {
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        hasUserId: !!session?.user?.id,
-        hasRole: !!session?.user?.role
-      });
     }
   }, [session]);
 
   const fetchData = async () => {
-    // Verificar novamente se a sessão está disponível antes de fazer fetch
-    if (!session?.user?.id) {
-      console.error('❌ TeacherDashboard: Tentativa de fetch sem session.user.id');
-      return;
-    }
+    if (!session?.user?.id) return;
 
     try {
       setIsLoading(true);
-      console.log('🔍 TeacherDashboard: Iniciando busca de dados...');
-
       const [classroomRes, assignmentRes, exercisesRes] = await Promise.all([
         fetch('/api/classrooms', { cache: 'no-store', credentials: 'include' }),
         fetch('/api/assignments', { cache: 'no-store', credentials: 'include' }),
         fetch('/api/exercises?limit=1', { cache: 'no-store', credentials: 'include' }),
       ]);
 
-      console.log('📊 TeacherDashboard: Respostas recebidas:', {
-        classrooms: classroomRes.status,
-        assignments: assignmentRes.status,
-        exercises: exercisesRes.status
-      });
-
       if (classroomRes.ok) {
-        const classroomData = await classroomRes.json();
-        setClassrooms(classroomData.classrooms || []);
-        console.log('✅ TeacherDashboard: Turmas carregadas:', classroomData.classrooms?.length || 0);
+        const data = await classroomRes.json();
+        setClassrooms(data.classrooms || []);
       } else {
         const payload = await classroomRes.json().catch(() => null);
-        console.error('❌ TeacherDashboard: Erro ao carregar turmas:', payload);
         toast.error(payload?.error || 'Erro ao carregar turmas');
       }
 
       if (assignmentRes.ok) {
-        const assignmentData = await assignmentRes.json();
-        setAssignments(assignmentData.assignments || []);
-        console.log('✅ TeacherDashboard: Atividades carregadas:', assignmentData.assignments?.length || 0);
+        const data = await assignmentRes.json();
+        setAssignments(data.assignments || []);
       } else {
         const payload = await assignmentRes.json().catch(() => null);
-        console.error('❌ TeacherDashboard: Erro ao carregar atividades:', payload);
         toast.error(payload?.error || 'Erro ao carregar atividades');
       }
 
       if (exercisesRes.ok) {
-        const exercisesData = await exercisesRes.json();
-        const total = exercisesData.pagination?.total || 0;
-        setExercisesCount(total);
-        console.log('✅ TeacherDashboard: Total de exercícios:', total);
-      } else {
-        const payload = await exercisesRes.json().catch(() => null);
-        console.error('❌ TeacherDashboard: Erro ao carregar exercícios:', payload);
+        const data = await exercisesRes.json();
+        setExercisesCount(data.pagination?.total || 0);
       }
     } catch (error) {
-      console.error('❌ TeacherDashboard: Erro geral ao carregar dados:', error);
+      console.error('Erro ao carregar dados:', error);
       toast.error('Erro ao carregar dados');
     } finally {
       setIsLoading(false);
     }
   };
 
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 lg:pl-64 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-500 text-sm">Carregando...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-slate-50">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         userName={session?.user?.name}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="lg:pl-64 flex flex-col min-h-screen">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
-              <div className="flex items-center space-x-4">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+          <div className="px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-4">
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                  className="lg:hidden p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <Menu className="h-6 w-6" />
+                  <Menu className="h-5 w-5" />
                 </button>
-                <div className="flex items-center">
-                  <h1 className="text-2xl font-bold text-primary-500">CodeArena</h1>
-                  <span className="ml-4 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-                    Professor
-                  </span>
-                </div>
+                <h1 className="text-base font-semibold text-gray-900">Dashboard</h1>
               </div>
+              <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-600 ring-1 ring-blue-500/20">
+                Professor
+              </span>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Painel do Professor
-          </h1>
-          <p className="text-gray-600">
-            Gerencie suas turmas, exercícios e acompanhe o progresso dos alunos
-          </p>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Link
-            href="/dashboard/classrooms/create"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-dashed border-gray-300 hover:border-primary-500 group"
-          >
-            <div className="text-center">
-              <div className="mx-auto w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary-200 transition-colors">
-                <Plus className="w-6 h-6 text-primary-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Nova Turma
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Crie uma nova turma e gere código de convite para alunos
-              </p>
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/exercises/create"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-dashed border-gray-300 hover:border-primary-500 group"
-          >
-            <div className="text-center">
-              <div className="mx-auto w-12 h-12 bg-success-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-success-200 transition-colors">
-                <BookOpen className="w-6 h-6 text-success-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Novo Exercício
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Crie exercícios de programação com casos de teste
-              </p>
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/assignments/create"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-dashed border-gray-300 hover:border-primary-500 group"
-          >
-            <div className="text-center">
-              <div className="mx-auto w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-yellow-200 transition-colors">
-                <Clock className="w-6 h-6 text-yellow-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Nova Atividade
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Crie listas de exercícios ou provas para suas turmas
-              </p>
-            </div>
-          </Link>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Link
-            href="/dashboard/classrooms"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-          >
-            <div className="flex items-center">
-              <div className="p-2 bg-primary-100 rounded-lg">
-                <Users className="w-6 h-6 text-primary-500" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Turmas</p>
-                <p className="text-2xl font-bold text-gray-900">{classrooms.length}</p>
-              </div>
-            </div>
-          </Link>
-          
-          <Link
-            href="/dashboard/exercises"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-          >
-            <div className="flex items-center">
-              <div className="p-2 bg-success-100 rounded-lg">
-                <BookOpen className="w-6 h-6 text-success-500" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Exercícios</p>
-                <p className="text-2xl font-bold text-gray-900">{exercisesCount}</p>
-              </div>
-            </div>
-          </Link>
-          
-          <Link
-            href="/dashboard/assignments"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-          >
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-6 h-6 text-yellow-500" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Atividades Ativas</p>
-                <p className="text-2xl font-bold text-gray-900">{assignments.length}</p>
-              </div>
-            </div>
-          </Link>
-          
-          <Link
-            href="/dashboard/students"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-          >
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-blue-500" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total de Alunos</p>
-                <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Classrooms */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Turmas Recentes
-              </h2>
-              <Link
-                href="/dashboard/classrooms"
-                className="text-primary-500 hover:text-primary-600 text-sm font-medium"
-              >
-                Ver todas
-              </Link>
-            </div>
-            
-            {recentClassrooms.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">Nenhuma turma criada ainda</p>
-                <Link
-                  href="/dashboard/classrooms/create"
-                  className="bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 transition-colors"
-                >
-                  Criar Primeira Turma
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentClassrooms.map((classroom) => (
-                  <div
-                    key={classroom._id}
-                    className="flex items-center justify-between rounded-lg border border-gray-200 p-3"
-                  >
-                    <div>
-                      <h3 className="font-medium text-gray-900">{classroom.name}</h3>
-                      <p className="text-xs text-gray-500">
-                        Código: <span className="font-mono">{classroom.inviteCode}</span>
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
-                        {(classroom.students?.length || 0)} alunos
-                      </span>
-                      <Link
-                        href={`/dashboard/classrooms/${classroom._id}/edit`}
-                        className="text-xs font-semibold text-primary-600 hover:underline"
-                      >
-                        Gerenciar
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* Content */}
+        <div className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+          {/* Welcome */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">
+              Olá, {session?.user?.name?.split(' ')[0]} 👋
+            </h2>
+            <p className="text-gray-500 text-sm">
+              Aqui está um resumo das suas turmas e atividades
+            </p>
           </div>
 
-          {/* Recent Assignments */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Atividades Recentes
-              </h2>
-              <Link
-                href="/dashboard/assignments"
-                className="text-primary-500 hover:text-primary-600 text-sm font-medium"
-              >
-                Ver todas
-              </Link>
-            </div>
-            
-            {assignments.length === 0 ? (
-              <div className="text-center py-8">
-                <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">Nenhuma atividade criada ainda</p>
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Link
+              href="/dashboard/classrooms/create"
+              className="bg-white p-5 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors flex-shrink-0">
+                  <Plus className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Nova Turma</h3>
+                  <p className="text-gray-500 text-xs mt-0.5">Crie e convide alunos</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/exercises/create"
+              className="bg-white p-5 rounded-xl border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center group-hover:bg-emerald-100 transition-colors flex-shrink-0">
+                  <BookOpen className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Novo Exercício</h3>
+                  <p className="text-gray-500 text-xs mt-0.5">Com casos de teste</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/assignments/create"
+              className="bg-white p-5 rounded-xl border border-gray-200 hover:border-amber-300 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center group-hover:bg-amber-100 transition-colors flex-shrink-0">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Nova Atividade</h3>
+                  <p className="text-gray-500 text-xs mt-0.5">Lista ou prova</p>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <Link
+              href="/dashboard/classrooms"
+              className="bg-white p-5 rounded-xl border border-gray-200 hover:shadow-md transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{classrooms.length}</p>
+                  <p className="text-xs text-gray-500 font-medium">Turmas</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/exercises"
+              className="bg-white p-5 rounded-xl border border-gray-200 hover:shadow-md transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{exercisesCount}</p>
+                  <p className="text-xs text-gray-500 font-medium">Exercícios</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/assignments"
+              className="bg-white p-5 rounded-xl border border-gray-200 hover:shadow-md transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{assignments.length}</p>
+                  <p className="text-xs text-gray-500 font-medium">Atividades</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/students"
+              className="bg-white p-5 rounded-xl border border-gray-200 hover:shadow-md transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <BarChart3 className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
+                  <p className="text-xs text-gray-500 font-medium">Alunos</p>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Recent Classrooms */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-semibold text-gray-900">Turmas Recentes</h3>
                 <Link
-                  href="/dashboard/assignments/create"
-                  className="bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 transition-colors"
+                  href="/dashboard/classrooms"
+                  className="text-blue-600 hover:text-blue-700 text-xs font-medium"
                 >
-                  Criar Primeira Atividade
+                  Ver todas →
                 </Link>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {assignments.slice(0, 3).map((assignment) => (
-                  <div key={assignment._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <h3 className="font-medium text-gray-900">{assignment.title}</h3>
-                      <p className="text-sm text-gray-600">
-                        {assignment.classroom.name} • {assignment.exercises.length} exercícios
-                      </p>
+
+              {recentClassrooms.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm mb-4">Nenhuma turma criada ainda</p>
+                  <Link
+                    href="/dashboard/classrooms/create"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+                  >
+                    Criar Primeira Turma
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentClassrooms.map((classroom) => (
+                    <div
+                      key={classroom._id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div>
+                        <h4 className="font-medium text-gray-900 text-sm">{classroom.name}</h4>
+                        <p className="text-xs text-gray-500 font-mono mt-0.5">
+                          {classroom.inviteCode}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="bg-blue-50 text-blue-700 text-xs font-medium px-2.5 py-1 rounded-full">
+                          {classroom.students?.length || 0} alunos
+                        </span>
+                        <Link
+                          href={`/dashboard/classrooms/${classroom._id}/edit`}
+                          className="text-xs text-blue-600 hover:underline font-medium"
+                        >
+                          Gerenciar
+                        </Link>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        assignment.type === 'prova' 
-                          ? 'bg-red-100 text-red-800' 
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Assignments */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-semibold text-gray-900">Atividades Recentes</h3>
+                <Link
+                  href="/dashboard/assignments"
+                  className="text-blue-600 hover:text-blue-700 text-xs font-medium"
+                >
+                  Ver todas →
+                </Link>
+              </div>
+
+              {assignments.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm mb-4">Nenhuma atividade criada ainda</p>
+                  <Link
+                    href="/dashboard/assignments/create"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+                  >
+                    Criar Primeira Atividade
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {assignments.slice(0, 3).map((assignment) => (
+                    <div
+                      key={assignment._id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div>
+                        <h4 className="font-medium text-gray-900 text-sm">{assignment.title}</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {assignment.classroom.name} · {assignment.exercises.length} exercícios
+                        </p>
+                      </div>
+                      <span
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                          assignment.type === 'prova'
+                            ? 'bg-red-50 text-red-700'
+                            : 'bg-blue-50 text-blue-700'
+                        }`}
+                      >
                         {assignment.type === 'prova' ? 'Prova' : 'Lista'}
                       </span>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

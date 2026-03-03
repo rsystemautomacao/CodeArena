@@ -286,7 +286,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ backgroundColor: '#f9fafb' }}>
+    <div className="min-h-screen bg-slate-50 lg:pl-64" style={{ backgroundColor: '#f9fafb' }}>
       <DashboardHeader title="Meu Perfil" />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
