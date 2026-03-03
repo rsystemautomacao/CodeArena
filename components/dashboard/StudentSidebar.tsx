@@ -45,10 +45,10 @@ export default function StudentSidebar({
 
   return (
     <>
-      {/* Overlay — apenas no mobile */}
+      {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40"
           onClick={onClose}
         />
       )}
@@ -57,7 +57,7 @@ export default function StudentSidebar({
       <aside
         className={`fixed top-0 left-0 h-full w-64 bg-slate-900 z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
+        }`}
       >
         {/* Logo */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-slate-700/50">
@@ -69,7 +69,7 @@ export default function StudentSidebar({
           </Link>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors lg:hidden"
+            className="text-slate-400 hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>

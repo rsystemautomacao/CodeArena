@@ -57,7 +57,7 @@ export default function DashboardHeader({ title }: DashboardHeaderProps) {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <Menu className="h-5 w-5" />
               </button>

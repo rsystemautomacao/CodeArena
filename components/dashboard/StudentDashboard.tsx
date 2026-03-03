@@ -142,7 +142,7 @@ export default function StudentDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 lg:pl-64 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600 mx-auto"></div>
           <p className="mt-4 text-gray-500 text-sm">Carregando...</p>
@@ -159,7 +159,7 @@ export default function StudentDashboard() {
         userName={session?.user?.name}
       />
 
-      <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen">
         {/* Header */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
           <div className="px-4 sm:px-6 lg:px-8">
@@ -167,7 +167,7 @@ export default function StudentDashboard() {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <Menu className="h-5 w-5" />
                 </button>
