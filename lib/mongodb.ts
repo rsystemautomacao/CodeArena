@@ -1,6 +1,13 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rsautomacao2000_db_user:%40Desbravadores%4093@codearena-cluster.6b3h9ce.mongodb.net/?retryWrites=true&w=majority&appName=CodeArena-Cluster';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error(
+    'MONGODB_URI não está definida nas variáveis de ambiente. ' +
+    'Crie o arquivo .env.local com a variável MONGODB_URI.'
+  );
+}
 
 // Validar se a string de conexão está correta
 if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
@@ -14,12 +21,6 @@ if (!cached) {
 }
 
 async function connectDB() {
-  // Em modo de desenvolvimento, se não há MONGODB_URI, retornar null
-  if (!MONGODB_URI) {
-    console.warn('⚠️ MONGODB_URI não definida. Funcionando em modo de desenvolvimento sem banco de dados.');
-    return null;
-  }
-
   if (cached.conn) {
     return cached.conn;
   }
@@ -29,7 +30,7 @@ async function connectDB() {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
       return mongoose;
     });
   }

@@ -34,6 +34,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Alunos devem ter o perfil completo antes de submeter
+    if (session.user.role === 'aluno' && session.user.profileCompleted === false) {
+      return NextResponse.json(
+        { error: 'Você precisa completar seu perfil antes de submeter soluções.', profileIncomplete: true },
+        { status: 403 }
+      );
+    }
+
+    // Limite de tamanho do código: 64 KB
+    const MAX_CODE_SIZE = 64 * 1024; // 64 KB em bytes
+    if (Buffer.byteLength(code, 'utf8') > MAX_CODE_SIZE) {
+      return NextResponse.json(
+        { error: 'O código submetido é muito grande. O tamanho máximo permitido é 64 KB.' },
+        { status: 400 }
+      );
+    }
+
     // Validar que o código não está apenas com template vazio
     const trimmedCode = code.trim();
     const languageTemplates = {
@@ -95,11 +112,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // VALIDAÇÃO DE ACESSO PARA PROVAS
+    // VALIDAÇÃO DE ACESSO PARA PROVAS E LISTAS
     if (assignmentId) {
       const assignment = await Assignment.findById(assignmentId);
-      
-      if (assignment && assignment.type === 'prova') {
+
+      if (!assignment || !assignment.isActive) {
+        return NextResponse.json(
+          { error: 'Atividade não encontrada ou inativa.' },
+          { status: 404 }
+        );
+      }
+
+      // Verificar se a atividade está dentro do período permitido
+      const now = new Date();
+      if (now < new Date(assignment.startDate)) {
+        return NextResponse.json(
+          { error: 'Esta atividade ainda não foi aberta. Aguarde o início.' },
+          { status: 403 }
+        );
+      }
+      if (now > new Date(assignment.endDate)) {
+        return NextResponse.json(
+          { error: 'O prazo desta atividade já encerrou. Submissões não são mais aceitas.' },
+          { status: 403 }
+        );
+      }
+
+      if (assignment.type === 'prova') {
         // VALIDAÇÃO DE SESSÃO ÚNICA: Verificar se a sessão do aluno está ativa
         if (session.user.role === 'aluno') {
           const sessionValid = await checkSessionValid(session.user.id);
@@ -200,6 +239,7 @@ export async function POST(request: NextRequest) {
     const testCases = exercise.testCases.map((tc: any) => ({
       input: tc.input,
       expectedOutput: tc.expectedOutput,
+      isHidden: tc.isHidden === true,
     }));
 
     if (!testCases || testCases.length === 0) {
@@ -279,8 +319,10 @@ export async function POST(request: NextRequest) {
       } else {
         // Se qualquer teste falhar, a submissão é rejeitada
         finalStatus = testResult.status;
+        const isHiddenTest = testCases[result.results.indexOf(testResult)]?.isHidden === true;
         finalMessage = `Teste ${testResult.testCase} falhou: ${testResult.message}`;
-        if (testResult.output && testResult.expectedOutput) {
+        // Exibir detalhes de diff SOMENTE para casos visíveis (não ocultos)
+        if (!isHiddenTest && testResult.output && testResult.expectedOutput) {
           finalMessage += `\nSaída obtida: ${testResult.output.trim()}\nSaída esperada: ${testResult.expectedOutput.trim()}`;
         }
         break; // Primeiro erro encontrado
@@ -325,12 +367,29 @@ export async function POST(request: NextRequest) {
     // CRÍTICO: Se houver erro de compilação ou qualquer erro, retornar success: false
     const isAccepted = finalStatus === 'accepted' && !hasCompilationError && passedTests === totalTests;
 
+    // Sanitizar os resultados antes de enviar ao cliente:
+    // - Casos ocultos (isHidden) não devem expor expectedOutput nem o output do aluno
+    const sanitizedTestResults = result.results.map((r, i) => {
+      const isHidden = testCases[i]?.isHidden === true;
+      if (isHidden) {
+        return {
+          testCase: r.testCase,
+          status: r.status,
+          message: r.status === 'accepted' ? 'Caso de teste oculto: correto' : 'Caso de teste oculto: incorreto',
+          time: r.time,
+          memory: r.memory,
+          // output, expectedOutput e compilationError OMITIDOS para casos ocultos
+        };
+      }
+      return r;
+    });
+
     return NextResponse.json({
       success: isAccepted,
       submissionId: submission._id,
       status: finalStatus,
       message: finalMessage,
-      testResults: result.results,
+      testResults: sanitizedTestResults,
       passedTests,
       totalTests: result.results.length,
       error: !isAccepted ? (hasCompilationError ? `Erro de compilação: ${compilationErrorDetails || finalMessage}` : finalMessage) : undefined,
@@ -375,8 +434,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const exerciseId = searchParams.get('exerciseId');
     const assignmentId = searchParams.get('assignmentId');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const MAX_PAGE_LIMIT = 100;
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(MAX_PAGE_LIMIT, Math.max(1, parseInt(searchParams.get('limit') || '10')));
 
     const dbConnection = await connectDB();
     if (!dbConnection) {

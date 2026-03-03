@@ -55,22 +55,38 @@ export interface Judge0Result {
 // Helper para delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper para fetch com retry
+// Timeout padrão por requisição individual ao Judge0 (10 segundos)
+const JUDGE0_REQUEST_TIMEOUT_MS = 10_000;
+
+/**
+ * Faz fetch com timeout absoluto por requisição e retry com backoff exponencial.
+ * O AbortController garante que nenhuma requisição individual bloqueie indefinidamente.
+ */
 async function fetchWithRetry(url: string, options: RequestInit, retries = 3, backoff = 1000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), JUDGE0_REQUEST_TIMEOUT_MS);
+
   try {
-    const response = await fetch(url, options);
-    
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
+
     // Se for erro de servidor (5xx) ou Too Many Requests (429), tentar novamente
     if ((response.status >= 500 || response.status === 429) && retries > 0) {
-      console.warn(`⚠️ Erro ${response.status} ao acessar ${url}. Tentando novamente em ${backoff}ms... (${retries} tentativas restantes)`);
       await delay(backoff);
       return fetchWithRetry(url, options, retries - 1, backoff * 2);
     }
-    
+
     return response;
-  } catch (error) {
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error?.name === 'AbortError') {
+      if (retries > 0) {
+        await delay(backoff);
+        return fetchWithRetry(url, options, retries - 1, backoff * 2);
+      }
+      throw new Error(`Requisição ao Judge0 excedeu ${JUDGE0_REQUEST_TIMEOUT_MS}ms sem resposta.`);
+    }
     if (retries > 0) {
-      console.warn(`⚠️ Erro de rede ao acessar ${url}. Tentando novamente em ${backoff}ms... (${retries} tentativas restantes)`, error);
       await delay(backoff);
       return fetchWithRetry(url, options, retries - 1, backoff * 2);
     }
@@ -81,7 +97,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3, ba
 export async function submitCode(
   code: string,
   language: string,
-  testCases: Array<{ input: string; expectedOutput: string }>,
+  testCases: Array<{ input: string; expectedOutput: string; isHidden?: boolean }>,
   timeLimit: number = 2,
   memoryLimit: number = 128
 ): Promise<{
@@ -95,6 +111,7 @@ export async function submitCode(
     output?: string;
     expectedOutput?: string;
     compilationError?: string;
+    isHidden: boolean;
   }>;
   error?: string;
 }> {
@@ -185,6 +202,7 @@ export async function submitCode(
           testCase: i + 1,
           status: 'time_limit_exceeded',
           message: 'Tempo limite excedido para obter resposta do servidor (Judge0)',
+          isHidden: testCase.isHidden === true,
         });
         continue;
       }
@@ -245,6 +263,7 @@ export async function submitCode(
         output: result.stdout || result.stderr || result.compile_output || '',
         expectedOutput: testCase.expectedOutput,
         compilationError: status === 'compilation_error' ? (result.compile_output || result.stderr || '') : undefined,
+        isHidden: testCase.isHidden === true,
       });
     }
 
